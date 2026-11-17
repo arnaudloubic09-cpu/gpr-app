@@ -31,6 +31,7 @@ const ME_SELECT = {
   role: true,
   clubId: true,
   favoriteClubId: true,
+  deletionScheduledFor: true,
 } as const;
 
 @Controller('me')

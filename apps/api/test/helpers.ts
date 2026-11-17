@@ -43,6 +43,15 @@ export class CapturingMailService extends MailService {
   async sendAlert(to: string[], subject: string, text: string): Promise<void> {
     this.alerts.push({ to, subject, text });
   }
+  readonly attachments: { to: string; subject: string; filename: string; content: string }[] = [];
+  async sendAttachment(
+    to: string,
+    subject: string,
+    _text: string,
+    a: { filename: string; content: string },
+  ): Promise<void> {
+    this.attachments.push({ to, subject, ...a });
+  }
   lastCodeFor(email: string): string | undefined {
     return [...this.sent].reverse().find((m) => m.to === email)?.code;
   }

@@ -42,13 +42,13 @@ export function fixScannerLayout(raw: string): string {
 
 /**
  * Forme canonique « GPR-XXXX-XXXX ». Accepte minuscules, espaces, absence de tirets ou de préfixe,
- * et une douchette réglée en QWERTY. Renvoie null si le texte n'est pas un code GPR.
+ * et une douchette réglée en QWERTY. Renvoie null si le texte n'est pas un code de coupon.
  */
 export function normalizeCouponCode(raw: string): string | null {
-  let n = fixScannerLayout(raw.trim())
+  const n = fixScannerLayout(raw.trim())
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '');
-  if (n.length === 8) n = `GPR${n}`;
-  if (!/^GPR[A-Z0-9]{8}$/.test(n)) return null;
-  return `GPR-${n.slice(3, 7)}-${n.slice(7)}`;
+  const body = n.length === 8 ? n : /^GPR[A-Z0-9]{8}$/.test(n) ? n.slice(3) : null;
+  if (!body || !/^[A-Z0-9]{8}$/.test(body)) return null;
+  return `GPR-${body.slice(0, 4)}-${body.slice(4)}`;
 }

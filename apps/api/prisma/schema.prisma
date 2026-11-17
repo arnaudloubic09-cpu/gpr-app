@@ -108,6 +108,11 @@ model User {
   anonymizedAt   DateTime?
   /// Compte admin désactivé par le super admin (connexion refusée).
   disabledAt     DateTime?
+  /// Code de la carte de membre (QR présenté au comptoir pour les avantages de niveau)
+  memberCode     String?   @unique
+  /// RGPD : suppression demandée (rétractation possible jusqu'à deletionScheduledFor)
+  deletionRequestedAt  DateTime?
+  deletionScheduledFor DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -120,6 +125,8 @@ model User {
   coupons       Coupon[]             @relation("CouponOwner")
   progress      ChallengeProgress[]
   badges        PlayerBadge[]
+  pushTokens    PushToken[]
+  notifications Notification[]
 
   @@index([role])
   @@index([clubId])
@@ -178,6 +185,7 @@ model Club {
   timezone            String   @default("Europe/Paris")
   /// Le club choisit d'activer ou non le bonus heures creuses (plages et multiplicateur fixés par le GPR).
   offPeakBonusEnabled Boolean  @default(false)
+  levelPerks          LevelPerk[]
   /// Comptoir : validation immédiate du coupon dès le scan (sans clic de confirmation)
   counterAutoValidate Boolean  @default(false)
   isActive            Boolean  @default(true)
@@ -481,4 +489,74 @@ model AnalyticsEvent {
 
   @@index([type, occurredAt])
   @@index([clubId, occurredAt])
+}
+
+// ─────────────────────────────── Notifications ───────────────────────────────
+
+enum NotificationType {
+  POINTS_VALIDATED
+  CHALLENGE_COMPLETED
+  BADGE_EARNED
+  LEVEL_UP
+  COUPON_EXPIRING
+  NEW_REWARD
+  ACCOUNT
+}
+
+/// Appareil du joueur pour les notifications push (jeton Expo).
+model PushToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  token      String   @unique
+  platform   String
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Centre de notifications du joueur ; dedupeKey garantit qu'une notification n'est jamais créée deux fois.
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  title     String
+  body      String
+  data      Json             @default("{}")
+  dedupeKey String           @unique
+  pushedAt  DateTime?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// État des tâches planifiées (ex. curseur de la tâche de gamification).
+model JobState {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Avantage permanent accordé par un club à partir d'un niveau (ex. -10 % sur le shop pour les membres Or).
+/// Catégories autorisées uniquement : jamais de réduction sur une partie de padel.
+model LevelPerk {
+  id              String         @id @default(uuid()) @db.Uuid
+  clubId          String         @db.Uuid
+  /// Code du niveau à partir duquel l'avantage s'applique (SILVER, GOLD, PLATINUM…)
+  levelCode       String
+  category        RewardCategory
+  discountPercent Int
+  label           String
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, isActive])
 }

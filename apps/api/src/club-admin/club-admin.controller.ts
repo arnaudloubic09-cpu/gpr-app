@@ -24,6 +24,7 @@ import type { AuthUser } from '../auth/auth.types';
 import { ClubScoped, CurrentUser, Roles } from '../auth/decorators';
 import { AuditService } from '../common/audit/audit.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { GamificationService } from '../gamification/gamification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClubCouponsService } from './club-coupons.service';
 import { PlayersService } from './players.service';
@@ -43,6 +44,7 @@ export class ClubAdminController {
     private readonly players: PlayersService,
     private readonly stats: StatsService,
     private readonly audit: AuditService,
+    private readonly gamification: GamificationService,
   ) {}
 
   @Get('stats')
@@ -94,6 +96,7 @@ export class ClubAdminController {
       clubId,
       after: body,
     });
+    await this.gamification.onRewardCreated(reward);
     return reward;
   }
 

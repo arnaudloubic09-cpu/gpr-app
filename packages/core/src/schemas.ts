@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OtpAudience } from './enums';
+import { ConsentType, OtpAudience } from './enums';
 
 export const emailSchema = z.string().trim().toLowerCase().email().max(254);
 
@@ -40,6 +40,8 @@ export interface MeResponse {
   role: string;
   clubId: string | null;
   favoriteClubId: string | null;
+  /** RGPD : date de suppression programmée (rétractation possible jusque-là). */
+  deletionScheduledFor?: string | Date | null;
 }
 
 export const updateProfileSchema = z
@@ -115,3 +117,14 @@ export interface TransactionItem {
   earnedAt: string;
   createdAt: string;
 }
+
+export const consentsUpdateSchema = z
+  .array(z.object({ type: z.nativeEnum(ConsentType), granted: z.boolean() }).strict())
+  .min(1)
+  .max(10);
+export type ConsentsUpdate = z.infer<typeof consentsUpdateSchema>;
+
+export const pushTokenSchema = z
+  .object({ token: z.string().min(10).max(300), platform: z.enum(['ios', 'android', 'web']) })
+  .strict();
+export type PushTokenInput = z.infer<typeof pushTokenSchema>;

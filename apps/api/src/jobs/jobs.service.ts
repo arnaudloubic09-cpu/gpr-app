@@ -5,10 +5,27 @@ import IORedis from 'ioredis';
 import type { Env } from '../config/env';
 import { LedgerService } from '../ledger/ledger.service';
 import { CouponsService } from '../rewards/coupons.service';
+import { GamificationService } from '../gamification/gamification.service';
+import { GdprService } from '../gamification/gdpr.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncService } from '../sync/sync.service';
 
 const QUEUE = 'gpr';
+
+/**
+ * Tâches globales : une seule liste, testée (jobs.service.spec.ts), pour qu'aucune
+ * tâche ne soit oubliée à la planification.
+ */
+export const GLOBAL_SCHEDULES = {
+  /** Expiration des points GPR (12 mois, FIFO). */
+  expire: { pattern: '15 3 * * *', tz: 'Europe/Paris' },
+  /** Rappel « coupon expire demain » + remboursement des coupons expirés. */
+  'coupons-expire': { pattern: '5 * * * *' },
+  /** Points validés → notifications, défis, badges, niveaux. */
+  gamification: { pattern: '*/15 * * * *' },
+  /** Anonymisation des comptes au terme du délai de rétractation de 30 jours. */
+  'gdpr-deletions': { pattern: '30 3 * * *', tz: 'Europe/Paris' },
+} as const;
 type JobData = { clubId?: string };
 
 /**
@@ -31,6 +48,8 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     private readonly sync: SyncService,
     private readonly ledger: LedgerService,
     private readonly coupons: CouponsService,
+    private readonly gamification: GamificationService,
+    private readonly gdpr: GdprService,
   ) {}
 
   async onModuleInit() {
@@ -47,16 +66,16 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
       this.logger.error(`Tâche ${job?.name} en échec : ${err.message}`),
     );
 
-    await this.queue.upsertJobScheduler(
-      'expire',
-      { pattern: '15 3 * * *', tz: 'Europe/Paris' },
-      { name: 'expire' },
-    );
+    for (const [name, repeat] of Object.entries(GLOBAL_SCHEDULES)) {
+      await this.queue.upsertJobScheduler(name, repeat, { name });
+    }
     const clubs = await this.prisma.clubConnectorConfig.findMany({
       where: { club: { isActive: true } },
     });
     for (const c of clubs) await this.scheduleClub(c.clubId, c.syncIntervalMinutes);
-    this.logger.log(`Planification active : ${clubs.length} club(s) + expiration quotidienne`);
+    this.logger.log(
+      `Planification active : ${clubs.length} club(s) + ${Object.keys(GLOBAL_SCHEDULES).join(', ')}`,
+    );
   }
 
   /** (Re)programme la synchro d'un club — à rappeler quand sa fréquence change (phase 4). */
@@ -78,8 +97,17 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
       if (res.status === 'FAILED') throw new Error(res.run.error ?? 'Synchronisation en échec');
       return res.status;
     }
-    if (job.name === 'expire') return this.ledger.runExpirations();
-    if (job.name === 'coupons-expire') return this.coupons.expireDue();
+    switch (job.name as keyof typeof GLOBAL_SCHEDULES) {
+      case 'expire':
+        return this.ledger.runExpirations();
+      case 'coupons-expire':
+        await this.gamification.couponReminders();
+        return this.coupons.expireDue();
+      case 'gamification':
+        return this.gamification.run();
+      case 'gdpr-deletions':
+        return this.gdpr.runDueDeletions();
+    }
   }
 
   async onApplicationShutdown() {

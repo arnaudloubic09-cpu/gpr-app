@@ -7,6 +7,7 @@ import { ClubAdminModule } from './club-admin/club-admin.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env';
+import { GamificationModule } from './gamification/gamification.module';
 import { HealthController } from './health/health.controller';
 import { ConnectorsModule } from './connectors/connectors.module';
 import { LedgerModule } from './ledger/ledger.module';
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     LedgerModule,
     ConnectorsModule,
     RewardsModule,
+    GamificationModule,
     UsersModule,
     ClubsModule,
     ClubAdminModule,

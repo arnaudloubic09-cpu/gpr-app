@@ -17,7 +17,7 @@ describe('Alignement des enums core ↔ Prisma', () => {
 
   it.each(names)('%s', (name) => {
     const fromPrisma = Object.values((prisma as Record<string, object>)[name]).sort();
-    const fromCore = Object.values((core as Record<string, object>)[name]).sort();
+    const fromCore = Object.values((core as unknown as Record<string, object>)[name]).sort();
     expect(fromCore).toEqual(fromPrisma);
   });
 });

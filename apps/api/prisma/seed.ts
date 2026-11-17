@@ -159,6 +159,67 @@ async function main() {
     }
   }
 
+  // ── Avantages de niveau (démo) : réductions permanentes en club ──
+  const perksByClub: Record<
+    string,
+    {
+      levelCode: string;
+      category: 'EQUIPMENT' | 'TOURNAMENT' | 'DRINK';
+      discountPercent: number;
+      label: string;
+    }[]
+  > = {
+    'padel-arena-toulouse': [
+      {
+        levelCode: 'SILVER',
+        category: 'EQUIPMENT',
+        discountPercent: 5,
+        label: '-5 % sur le shop du club',
+      },
+      {
+        levelCode: 'GOLD',
+        category: 'EQUIPMENT',
+        discountPercent: 10,
+        label: '-10 % sur le shop du club',
+      },
+      {
+        levelCode: 'GOLD',
+        category: 'TOURNAMENT',
+        discountPercent: 10,
+        label: '-10 % sur les inscriptions aux tournois',
+      },
+      {
+        levelCode: 'PLATINUM',
+        category: 'EQUIPMENT',
+        discountPercent: 15,
+        label: '-15 % sur le shop du club',
+      },
+      {
+        levelCode: 'PLATINUM',
+        category: 'TOURNAMENT',
+        discountPercent: 15,
+        label: '-15 % sur les inscriptions aux tournois',
+      },
+    ],
+    'smash-club-bordeaux': [
+      { levelCode: 'SILVER', category: 'DRINK', discountPercent: 10, label: '-10 % au bar' },
+      {
+        levelCode: 'GOLD',
+        category: 'TOURNAMENT',
+        discountPercent: 10,
+        label: '-10 % sur les tournois',
+      },
+    ],
+  };
+  for (const c of CLUBS) {
+    const club = await prisma.club.findUniqueOrThrow({ where: { slug: c.slug } });
+    if ((await prisma.levelPerk.count({ where: { clubId: club.id } })) === 0) {
+      await prisma.levelPerk.createMany({
+        data: perksByClub[c.slug].map((p) => ({ ...p, clubId: club.id })),
+      });
+    }
+  }
+
   // ── 30 joueurs ──
   for (let i = 1; i <= 30; i++) {
     const firstName = faker.person.firstName();

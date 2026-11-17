@@ -28,6 +28,8 @@ const envSchema = z.object({
     .transform((v) => v === 'true'),
   /** Fenêtre de relecture à chaque synchro, pour capter les annulations / absences tardives. */
   SYNC_LOOKBACK_DAYS: z.coerce.number().int().positive().default(7),
+  /** Notifications push : « log » (simulé, par défaut) ou « expo » (production). */
+  PUSH_PROVIDER: z.enum(['log', 'expo']).default('log'),
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),
   SMTP_FROM: z.string().default('GPR <no-reply@gpr.local>'),
