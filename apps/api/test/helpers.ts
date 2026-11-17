@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaClient, Role } from '@prisma/client';
+import { DEFAULT_GPR_RULES } from '@gpr/core';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -57,7 +58,38 @@ export class CapturingMailService extends MailService {
   }
 }
 
+/**
+ * Règles GPR par défaut garanties dans la base de test : chaque suite est autonome,
+ * y compris sur une base neuve (CI). N'écrase pas une version existante.
+ */
+export async function ensureDefaultRules() {
+  const prisma = new PrismaClient();
+  try {
+    const r = DEFAULT_GPR_RULES;
+    await prisma.ruleSet.upsert({
+      where: { version: 1 },
+      update: {},
+      create: {
+        version: 1,
+        pointsPerSlot: r.pointsPerSlot,
+        slotMinutes: r.slotMinutes,
+        dailyCapPerPlayer: null,
+        pendingDelayMinutes: r.pendingDelayMinutes,
+        expirationMonths: r.expirationMonths,
+        couponValidityDays: r.couponValidityDays,
+        clubAdjustmentMax: r.clubAdjustmentMax,
+        offPeakMultiplier: r.offPeakMultiplier,
+        offPeakWindows: r.offPeakWindows as never,
+        levels: r.levels as never,
+      },
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 export async function createTestApp(connector?: BookingConnector) {
+  await ensureDefaultRules();
   const mail = new CapturingMailService();
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(MailService)

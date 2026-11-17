@@ -6,7 +6,7 @@ import request from 'supertest';
 import { addMonths, DEFAULT_VIP_SETTINGS } from '@gpr/core';
 import { TokenService } from '../src/auth/token.service';
 import { VipService } from '../src/vip/vip.service';
-import { CapturingMailService, createTestApp, createUser } from './helpers';
+import { CapturingMailService, createClub, createTestApp, createUser } from './helpers';
 
 describe('Carte VIP et partenaires (intégration)', () => {
   const prisma = new PrismaClient();
@@ -194,11 +194,7 @@ describe('Carte VIP et partenaires (intégration)', () => {
       Math.round((new Date(second.body.endsAt).getTime() - Date.now()) / 86_400_000),
     ).toBeGreaterThanOrEqual(729);
     expect(await prisma.auditLog.count({ where: { entityId: p.id, action: 'vip.grant' } })).toBe(2);
-    const admin = await createUser(
-      prisma,
-      Role.CLUB_ADMIN,
-      (await prisma.club.findFirstOrThrow()).id,
-    );
+    const admin = await createUser(prisma, Role.CLUB_ADMIN, (await createClub(prisma)).id);
     await http()
       .post(`/admin/vip/players/${p.id}/grant`)
       .set(await as(admin))
