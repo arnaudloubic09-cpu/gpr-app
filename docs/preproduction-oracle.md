@@ -17,9 +17,10 @@ Adresses obtenues à la fin :
 ## Étape 1 — Créer le serveur gratuit chez Oracle Cloud
 
 1. Créer un compte sur **cloud.oracle.com** (offre « Free Tier »).
-   ⚠ À l'inscription, choisir la **région d'origine France** (_France Central – Paris_ ou _France South – Marseille_) :
-   elle ne peut plus être changée ensuite. Une carte bancaire est demandée pour vérifier l'identité ; rien n'est débité
-   tant qu'on reste dans les ressources « Always Free ».
+   ⚠ La **région d'origine** se choisit à l'inscription et ne peut plus être changée : prendre une région de
+   l'**Union européenne** (France si disponible, sinon **Germany Central – Frankfurt** ou **Netherlands Northwest –
+   Amsterdam**). Une carte bancaire est demandée pour vérifier l'identité ; rien n'est débité tant qu'on reste dans
+   les ressources « Always Free ».
 2. Menu ☰ → **Compute → Instances → Create instance**.
 3. **Name** : `gpr-preprod`.
 4. **Image and shape** → _Edit_ :
