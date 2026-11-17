@@ -5,6 +5,7 @@ import type { Env } from '../../config/env';
 
 export abstract class MailService {
   abstract sendOtp(to: string, code: string, ttlMinutes: number): Promise<void>;
+  abstract sendAlert(to: string[], subject: string, text: string): Promise<void>;
 }
 
 @Injectable()
@@ -29,5 +30,10 @@ export class SmtpMailService extends MailService {
       subject: `${code} est votre code de connexion GPR`,
       text: `Votre code de connexion GPR : ${code}\n\nIl est valable ${ttlMinutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.`,
     });
+  }
+
+  async sendAlert(to: string[], subject: string, text: string): Promise<void> {
+    if (!to.length) return;
+    await this.transporter.sendMail({ from: this.from, to, subject: `[GPR] ${subject}`, text });
   }
 }

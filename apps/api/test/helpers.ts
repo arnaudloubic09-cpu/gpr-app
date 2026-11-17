@@ -36,8 +36,12 @@ export class FakeConnector implements BookingConnector {
 /** Remplace l'envoi SMTP : capture les codes OTP envoyés. */
 export class CapturingMailService extends MailService {
   readonly sent: { to: string; code: string }[] = [];
+  readonly alerts: { to: string[]; subject: string; text: string }[] = [];
   async sendOtp(to: string, code: string): Promise<void> {
     this.sent.push({ to, code });
+  }
+  async sendAlert(to: string[], subject: string, text: string): Promise<void> {
+    this.alerts.push({ to, subject, text });
   }
   lastCodeFor(email: string): string | undefined {
     return [...this.sent].reverse().find((m) => m.to === email)?.code;

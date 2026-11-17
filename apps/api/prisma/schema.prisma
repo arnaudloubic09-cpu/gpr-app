@@ -106,6 +106,8 @@ model User {
   lastLoginAt    DateTime?
   /// Suppression RGPD : le compte est anonymisé (le ledger, immuable, est conservé sans donnée personnelle).
   anonymizedAt   DateTime?
+  /// Compte admin désactivé par le super admin (connexion refusée).
+  disabledAt     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -202,6 +204,8 @@ model ClubConnectorConfig {
   lastSyncAt           DateTime?
   lastSyncStatus       SyncStatus?
   lastSyncError        String?
+  /// Alerte « échecs répétés » envoyée (remise à zéro au premier succès)
+  failureAlertSentAt   DateTime?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
@@ -283,6 +287,8 @@ model RuleSet {
   expirationMonths    Int
   /// Validité d'un coupon de récompense (jours) — fixée par le GPR
   couponValidityDays  Int      @default(7)
+  /// Montant maximal (en valeur absolue) d'un ajustement manuel par un admin club
+  clubAdjustmentMax   Int      @default(200)
   offPeakMultiplier   Decimal  @db.Decimal(4, 2)
   /// [{ days: [1..7], start: "HH:mm", end: "HH:mm" }] en heure locale du club
   offPeakWindows      Json

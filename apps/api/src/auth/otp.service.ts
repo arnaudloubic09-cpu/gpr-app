@@ -44,9 +44,10 @@ export class OtpService {
 
   /** Le compte peut-il se connecter sur cette audience ? (null = compte à créer côté mobile) */
   private isEligible(
-    user: Pick<User, 'role' | 'anonymizedAt'> | null,
+    user: Pick<User, 'role' | 'anonymizedAt' | 'disabledAt'> | null,
     audience: OtpAudience,
   ): boolean {
+    if (user?.disabledAt) return false; // compte désactivé par le super admin
     if (audience === OtpAudience.ADMIN)
       return !!user && !user.anonymizedAt && ADMIN_ROLES.includes(user.role);
     if (!user) return true; // inscription d'un nouveau joueur

@@ -68,6 +68,10 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     );
   }
 
+  async unscheduleClub(clubId: string) {
+    await this.queue?.removeJobScheduler(`sync:${clubId}`);
+  }
+
   private async process(job: Job<JobData>) {
     if (job.name === 'sync' && job.data.clubId) {
       const res = await this.sync.syncClub(job.data.clubId);

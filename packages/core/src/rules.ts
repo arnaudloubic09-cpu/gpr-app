@@ -28,6 +28,8 @@ export interface GprRules {
   expirationMonths: number;
   /** Durée de validité d'un coupon de récompense, en jours. */
   couponValidityDays: number;
+  /** Ajustement manuel maximal (valeur absolue) autorisé à un admin club, en points GPR. */
+  clubAdjustmentMax: number;
   offPeakMultiplier: number;
   offPeakWindows: OffPeakWindow[];
   levels: LevelThreshold[];
@@ -43,6 +45,7 @@ export const DEFAULT_GPR_RULES: GprRules = {
   pendingDelayMinutes: 120,
   expirationMonths: 12,
   couponValidityDays: 7,
+  clubAdjustmentMax: 200,
   offPeakMultiplier: 2,
   offPeakWindows: [
     { days: WEEKDAYS, start: '00:00', end: '12:00' },

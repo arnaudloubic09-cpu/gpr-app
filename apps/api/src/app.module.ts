@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
+import { ClubAdminModule } from './club-admin/club-admin.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env';
@@ -11,6 +12,7 @@ import { ConnectorsModule } from './connectors/connectors.module';
 import { LedgerModule } from './ledger/ledger.module';
 import { RewardsModule } from './rewards/rewards.module';
 import { RulesModule } from './rules/rules.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 import { SyncModule } from './sync/sync.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -31,7 +33,9 @@ import { UsersModule } from './users/users.module';
     RewardsModule,
     UsersModule,
     ClubsModule,
+    ClubAdminModule,
     SyncModule,
+    SuperAdminModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

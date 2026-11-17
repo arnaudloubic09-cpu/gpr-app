@@ -10,11 +10,14 @@ import type {
 import type { Env } from '../config/env';
 import { AnalyticsService } from '../common/analytics/analytics.service';
 import { CryptoService } from '../common/crypto/crypto.service';
+import { MailService } from '../common/mail/mail.service';
 import { ConnectorRegistry } from '../connectors/connector-registry';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActiveRules, RulesService } from '../rules/rules.service';
 
 const STALE_RUN_MS = 30 * 60_000;
+/** Nombre d'échecs consécutifs déclenchant l'alerte email aux super admins. */
+export const FAILURE_ALERT_THRESHOLD = 3;
 const REVERSIBLE_STATUSES: BookingStatus[] = ['CANCELLED', 'NO_SHOW'];
 
 export type SyncOutcome =
@@ -47,6 +50,7 @@ export class SyncService {
     private readonly crypto: CryptoService,
     private readonly analytics: AnalyticsService,
     private readonly config: ConfigService<Env, true>,
+    private readonly mail: MailService,
   ) {}
 
   async syncClub(
@@ -119,6 +123,9 @@ export class SyncService {
         now,
         error: message,
       });
+      await this.alertIfRepeatedFailures(club.id, club.name, message).catch((err) =>
+        this.logger.error(`Alerte non envoyée : ${(err as Error).message}`),
+      );
       return { status: 'FAILED', run: failed };
     }
   }
@@ -145,7 +152,12 @@ export class SyncService {
         // En cas d'échec, lastSyncAt n'avance pas : la prochaine synchro relira la même période.
         data:
           status === 'SUCCESS'
-            ? { lastSyncAt: r.now, lastSyncStatus: status, lastSyncError: null }
+            ? {
+                lastSyncAt: r.now,
+                lastSyncStatus: status,
+                lastSyncError: null,
+                failureAlertSentAt: null,
+              }
             : { lastSyncStatus: status, lastSyncError: r.error },
       }),
     ]);
@@ -291,5 +303,37 @@ export class SyncService {
         payload: { bookingId, entries: count },
       });
     return count;
+  }
+
+  /** Après N échecs consécutifs, un email unique aux super admins (réarmé au premier succès). */
+  private async alertIfRepeatedFailures(clubId: string, clubName: string, error: string) {
+    const last = await this.prisma.syncRun.findMany({
+      where: { clubId, status: { not: 'RUNNING' } },
+      orderBy: { startedAt: 'desc' },
+      take: FAILURE_ALERT_THRESHOLD,
+      select: { status: true },
+    });
+    if (last.length < FAILURE_ALERT_THRESHOLD || last.some((r) => r.status !== 'FAILED')) return;
+
+    const armed = await this.prisma.clubConnectorConfig.updateMany({
+      where: { clubId, failureAlertSentAt: null },
+      data: { failureAlertSentAt: new Date() },
+    });
+    if (armed.count === 0) return; // déjà alerté
+
+    const admins = await this.prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN', disabledAt: null, anonymizedAt: null },
+      select: { email: true },
+    });
+    await this.mail.sendAlert(
+      admins.map((a) => a.email),
+      `Synchronisation en échec : ${clubName}`,
+      `La synchronisation des réservations du club « ${clubName} » a échoué ${FAILURE_ALERT_THRESHOLD} fois de suite.\n\n` +
+        `Dernière erreur : ${error}\n\nLes points GPR des parties jouées ne sont plus crédités ni annulés tant que la synchronisation ne fonctionne pas. ` +
+        `Vérifiez le connecteur dans le back-office (Clubs → ${clubName}), puis relancez une synchronisation.`,
+    );
+    this.logger.warn(
+      `Alerte envoyée : ${FAILURE_ALERT_THRESHOLD} échecs consécutifs pour ${clubName}`,
+    );
   }
 }

@@ -55,7 +55,8 @@ export class TokenService {
       await this.revokeFamily(stored.familyId);
       throw invalid;
     }
-    if (stored.expiresAt <= new Date() || stored.user.anonymizedAt) throw invalid;
+    if (stored.expiresAt <= new Date() || stored.user.anonymizedAt || stored.user.disabledAt)
+      throw invalid;
 
     const marked = await this.prisma.refreshToken.updateMany({
       where: { id: stored.id, usedAt: null, revokedAt: null },
