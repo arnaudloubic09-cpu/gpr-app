@@ -109,6 +109,10 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
   attribué qu'une fois, valable 7 jours ; autant de codes que le membre veut (plafond facultatif par partenaire) ;
   alerte email au GPR quand il reste moins de 20 codes.
 
+## Suivi du projet
+
+Décisions prises et actions restantes avant la production : [docs/suivi-projet.md](docs/suivi-projet.md).
+
 ## Documentation des API de réservation
 
 Questions à poser à Playtomic et Doinsport : [docs/questions-fournisseurs-api.md](docs/questions-fournisseurs-api.md).
