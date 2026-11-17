@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "GPR",
+    "slug": "gpr-padel",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": { "bundleIdentifier": "fr.gpr.padel" },
+    "android": { "package": "fr.gpr.padel" }
+  }
+}

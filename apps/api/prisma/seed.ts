@@ -1,0 +1,268 @@
+/**
+ * Données de démonstration : 2 clubs fictifs, 1 super admin, 1 admin par club, 30 joueurs,
+ * règles GPR par défaut, catalogue de récompenses, badges et défis d'exemple.
+ * Idempotent (upserts) : peut être relancé sans dupliquer les données.
+ * Les réservations simulées seront produites par le MockConnector (phase 2).
+ */
+import 'dotenv/config';
+import { faker } from '@faker-js/faker/locale/fr';
+import { Prisma, PrismaClient, Role } from '@prisma/client';
+import { DEFAULT_GPR_RULES, validateRewardConfig } from '@gpr/core';
+import { CryptoService } from '../src/common/crypto/crypto.service';
+
+const prisma = new PrismaClient();
+const crypto = new CryptoService({ get: () => process.env.CONNECTOR_ENCRYPTION_KEY } as never);
+
+faker.seed(2026); // données reproductibles
+
+const CLUBS = [
+  {
+    slug: 'padel-arena-toulouse',
+    name: 'Padel Arena Toulouse',
+    city: 'Toulouse',
+    offPeakBonusEnabled: true,
+    externalClubId: 'mock-playtomic-tls-001',
+    adminEmail: 'admin.toulouse@gpr.example',
+  },
+  {
+    slug: 'smash-club-bordeaux',
+    name: 'Smash Club Bordeaux',
+    city: 'Bordeaux',
+    offPeakBonusEnabled: false,
+    externalClubId: 'mock-doinsport-bdx-001',
+    adminEmail: 'admin.bordeaux@gpr.example',
+  },
+] as const;
+
+type RewardSeed = Omit<Prisma.RewardUncheckedCreateInput, 'clubId'>;
+
+const REWARDS: Record<(typeof CLUBS)[number]['slug'], RewardSeed[]> = {
+  'padel-arena-toulouse': [
+    { category: 'DRINK', kind: 'FREE_ITEM', title: 'Bière pression offerte (25 cl)', costGpr: 80 },
+    { category: 'SNACK', kind: 'FREE_ITEM', title: 'Part de pizza offerte', costGpr: 100 },
+    {
+      category: 'EQUIPMENT',
+      kind: 'FREE_ITEM',
+      title: 'Tube de 3 balles',
+      costGpr: 150,
+      stock: 40,
+    },
+    {
+      category: 'LESSON',
+      kind: 'DISCOUNT_PERCENT',
+      title: '-20 % sur un cours collectif',
+      costGpr: 250,
+      discountValue: 20,
+    },
+  ],
+  'smash-club-bordeaux': [
+    { category: 'DRINK', kind: 'FREE_ITEM', title: 'Soft ou bière offerte', costGpr: 70 },
+    {
+      category: 'EQUIPMENT',
+      kind: 'DISCOUNT_AMOUNT',
+      title: '-10 € sur une raquette',
+      costGpr: 400,
+      discountValue: 1000,
+      stock: 15,
+    },
+    {
+      category: 'TOURNAMENT',
+      kind: 'DISCOUNT_PERCENT',
+      title: '-50 % sur l’inscription au tournoi P100',
+      costGpr: 300,
+      discountValue: 50,
+    },
+  ],
+};
+
+async function main() {
+  // ── Règles GPR globales (version 1) ──
+  const r = DEFAULT_GPR_RULES;
+  await prisma.ruleSet.upsert({
+    where: { version: 1 },
+    update: {},
+    create: {
+      version: 1,
+      pointsPerSlot: r.pointsPerSlot,
+      slotMinutes: r.slotMinutes,
+      dailyCapPerPlayer: r.dailyCapPerPlayer,
+      pendingDelayMinutes: r.pendingDelayMinutes,
+      expirationMonths: r.expirationMonths,
+      offPeakMultiplier: r.offPeakMultiplier,
+      offPeakWindows: r.offPeakWindows as unknown as Prisma.InputJsonValue,
+      levels: r.levels as unknown as Prisma.InputJsonValue,
+    },
+  });
+
+  // ── Super admin ──
+  await prisma.user.upsert({
+    where: { email: 'superadmin@gpr.example' },
+    update: {},
+    create: {
+      email: 'superadmin@gpr.example',
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: Role.SUPER_ADMIN,
+    },
+  });
+
+  // ── Clubs, connecteurs simulés, admins, catalogue ──
+  const clubIds: string[] = [];
+  for (const c of CLUBS) {
+    const club = await prisma.club.upsert({
+      where: { slug: c.slug },
+      update: {},
+      create: {
+        slug: c.slug,
+        name: c.name,
+        city: c.city,
+        offPeakBonusEnabled: c.offPeakBonusEnabled,
+      },
+    });
+    clubIds.push(club.id);
+
+    await prisma.clubConnectorConfig.upsert({
+      where: { clubId: club.id },
+      update: {},
+      create: {
+        clubId: club.id,
+        provider: 'MOCK',
+        externalClubId: c.externalClubId,
+        credentialsEncrypted: crypto.encryptJson({ apiKey: 'demo-not-a-real-key' }),
+        syncIntervalMinutes: 30,
+      },
+    });
+
+    await prisma.user.upsert({
+      where: { email: c.adminEmail },
+      update: {},
+      create: {
+        email: c.adminEmail,
+        firstName: faker.person.firstName(),
+        lastName: faker.person.lastName(),
+        role: Role.CLUB_ADMIN,
+        clubId: club.id,
+      },
+    });
+
+    const existing = await prisma.reward.count({ where: { clubId: club.id } });
+    if (existing === 0) {
+      for (const reward of REWARDS[c.slug]) {
+        const errors = validateRewardConfig(reward);
+        if (errors.length)
+          throw new Error(`Récompense de démo invalide « ${reward.title} » : ${errors}`);
+        await prisma.reward.create({ data: { ...reward, clubId: club.id } });
+      }
+    }
+  }
+
+  // ── 30 joueurs ──
+  for (let i = 1; i <= 30; i++) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    const email = `joueur${String(i).padStart(2, '0')}@gpr.example`;
+    const player = await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        firstName,
+        lastName,
+        phone: faker.helpers.replaceSymbols('+33 6 ## ## ## ##'),
+        role: Role.PLAYER,
+        favoriteClubId: clubIds[i % 2],
+        consents: { create: { type: 'TERMS', granted: true } },
+      },
+    });
+    // Liaison avec un compte simulé chez le fournisseur de réservation (utilisée par le MockConnector).
+    await prisma.playerExternalLink.upsert({
+      where: {
+        provider_externalPlayerId: { provider: 'MOCK', externalPlayerId: `mock-player-${i}` },
+      },
+      update: {},
+      create: { userId: player.id, provider: 'MOCK', externalPlayerId: `mock-player-${i}` },
+    });
+  }
+
+  // ── Badges & défis de démonstration (exécutés par le moteur en phase 5) ──
+  const explorer = await prisma.badge.upsert({
+    where: { code: 'EXPLORER' },
+    update: {},
+    create: {
+      code: 'EXPLORER',
+      name: 'Explorateur',
+      description: 'A joué dans 2 clubs différents du groupement le même mois',
+      icon: 'compass',
+    },
+  });
+  const regular = await prisma.badge.upsert({
+    where: { code: 'REGULAR' },
+    update: {},
+    create: {
+      code: 'REGULAR',
+      name: 'Régularité',
+      description: '4 semaines consécutives avec au moins une partie',
+      icon: 'calendar',
+    },
+  });
+
+  if ((await prisma.challenge.count()) === 0) {
+    const startsAt = new Date('2026-01-01T00:00:00Z');
+    await prisma.challenge.createMany({
+      data: [
+        {
+          name: 'Jouer 3 fois cette semaine',
+          description: '3 parties dans la semaine',
+          trigger: 'BOOKING_COMPLETED',
+          condition: { type: 'COUNT', target: 3 },
+          period: 'WEEK',
+          startsAt,
+          rewardGpr: 50,
+        },
+        {
+          name: 'Explorateur',
+          description: 'Jouer dans 2 clubs différents du groupement ce mois-ci',
+          trigger: 'BOOKING_COMPLETED',
+          condition: { type: 'DISTINCT_CLUBS', target: 2 },
+          period: 'MONTH',
+          startsAt,
+          rewardBadgeId: explorer.id,
+        },
+        {
+          name: 'Lundi matin heures creuses',
+          description: 'Jouer un lundi matin en heures creuses',
+          trigger: 'BOOKING_COMPLETED',
+          condition: { type: 'MATCH', weekday: 1, before: '12:00', offPeak: true },
+          period: 'WEEK',
+          startsAt,
+          rewardGpr: 20,
+        },
+        {
+          name: 'Régularité',
+          description: 'Série de 4 semaines consécutives avec au moins une partie',
+          trigger: 'BOOKING_COMPLETED',
+          condition: { type: 'WEEKLY_STREAK', target: 4 },
+          period: 'FIXED',
+          startsAt,
+          rewardBadgeId: regular.id,
+        },
+      ],
+    });
+  }
+
+  const counts = {
+    clubs: await prisma.club.count(),
+    players: await prisma.user.count({ where: { role: 'PLAYER' } }),
+    admins: await prisma.user.count({ where: { role: { not: 'PLAYER' } } }),
+    rewards: await prisma.reward.count(),
+    challenges: await prisma.challenge.count(),
+  };
+  console.log('Seed terminé :', counts);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

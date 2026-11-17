@@ -1,0 +1,16 @@
+packages:
+  - apps/*
+  - packages/*
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - esbuild
+  - '@nestjs/core'
+  - '@swc/core'
+  - sharp
+  - unrs-resolver
+# Une seule copie de React dans le monorepo (version imposée par le SDK Expo)
+overrides:
+  react: 19.3.0
+  react-dom: 19.3.0

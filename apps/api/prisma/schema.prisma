@@ -1,0 +1,471 @@
+// Schéma GPR — application de fidélité padel.
+// Les enums sont dupliqués dans packages/core/src/enums.ts (test d'alignement dans l'API).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+enum Role {
+  PLAYER
+  CLUB_ADMIN
+  SUPER_ADMIN
+}
+
+enum BookingProvider {
+  PLAYTOMIC
+  DOINSPORT
+  MOCK
+}
+
+enum BookingStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum LedgerType {
+  EARN
+  BONUS
+  CHALLENGE
+  REDEEM
+  EXPIRE
+  REVERSAL
+  ADJUST
+}
+
+enum LedgerSourceType {
+  BOOKING
+  CHALLENGE
+  REDEMPTION
+  EXPIRATION
+  MANUAL
+}
+
+/// Aucune catégorie « réservation / partie de padel » n'existe : interdit par construction.
+enum RewardCategory {
+  DRINK
+  SNACK
+  EQUIPMENT
+  TOURNAMENT
+  LESSON
+}
+
+enum RewardKind {
+  FREE_ITEM
+  DISCOUNT_PERCENT
+  DISCOUNT_AMOUNT
+}
+
+enum CouponStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  CANCELLED
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum ChallengePeriod {
+  WEEK
+  MONTH
+  FIXED
+}
+
+enum ConsentType {
+  TERMS
+  PUSH_NOTIFICATIONS
+  MARKETING_EMAIL
+  ANALYTICS
+}
+
+// ─────────────────────────────── Identité ───────────────────────────────
+
+/// Un compte = un seul rôle. CLUB_ADMIN est rattaché à un club (contrainte CHECK en SQL).
+model User {
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique
+  firstName      String?
+  lastName       String?
+  phone          String?
+  role           Role      @default(PLAYER)
+  clubId         String?   @db.Uuid
+  favoriteClubId String?   @db.Uuid
+  lastLoginAt    DateTime?
+  /// Suppression RGPD : le compte est anonymisé (le ledger, immuable, est conservé sans donnée personnelle).
+  anonymizedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  club          Club?                @relation("ClubAdmins", fields: [clubId], references: [id])
+  favoriteClub  Club?                @relation("FavoriteClub", fields: [favoriteClubId], references: [id])
+  refreshTokens RefreshToken[]
+  consents      Consent[]
+  externalLinks PlayerExternalLink[]
+  ledger        LedgerEntry[]        @relation("LedgerOwner")
+  coupons       Coupon[]             @relation("CouponOwner")
+  progress      ChallengeProgress[]
+  badges        PlayerBadge[]
+
+  @@index([role])
+  @@index([clubId])
+}
+
+model OtpCode {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String
+  codeHash   String
+  audience   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, createdAt])
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @db.Uuid
+  /// Famille de rotation : si un jeton déjà utilisé est rejoué, toute la famille est révoquée.
+  familyId     String    @db.Uuid
+  tokenHash    String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+/// Historique des consentements (ajout seul : le dernier enregistrement par type fait foi).
+model Consent {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  type      ConsentType
+  granted   Boolean
+  createdAt DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, createdAt])
+}
+
+// ─────────────────────────────── Clubs & connecteurs ───────────────────────────────
+
+model Club {
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String
+  slug                String   @unique
+  city                String
+  timezone            String   @default("Europe/Paris")
+  /// Le club choisit d'activer ou non le bonus heures creuses (plages et multiplicateur fixés par le GPR).
+  offPeakBonusEnabled Boolean  @default(false)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  admins      User[]               @relation("ClubAdmins")
+  favoriteOf  User[]               @relation("FavoriteClub")
+  connector   ClubConnectorConfig?
+  bookings    Booking[]
+  syncRuns    SyncRun[]
+  rewards     Reward[]
+  coupons     Coupon[]
+  challenges  Challenge[]
+  ledger      LedgerEntry[]
+}
+
+model ClubConnectorConfig {
+  id                   String          @id @default(uuid()) @db.Uuid
+  clubId               String          @unique @db.Uuid
+  provider             BookingProvider
+  externalClubId       String
+  /// Identifiants chiffrés AES-256-GCM (format v1:iv:tag:data). Jamais en clair.
+  credentialsEncrypted String?
+  syncIntervalMinutes  Int             @default(30)
+  lastSyncAt           DateTime?
+  lastSyncStatus       SyncStatus?
+  lastSyncError        String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+}
+
+model PlayerExternalLink {
+  id               String          @id @default(uuid()) @db.Uuid
+  userId           String          @db.Uuid
+  provider         BookingProvider
+  externalPlayerId String
+  linkedAt         DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalPlayerId])
+  @@index([userId])
+}
+
+// ─────────────────────────────── Données de jeu (minimisées) ───────────────────────────────
+
+model Booking {
+  id               String          @id @default(uuid()) @db.Uuid
+  clubId           String          @db.Uuid
+  provider         BookingProvider
+  externalId       String
+  startsAt         DateTime
+  endsAt           DateTime
+  status           BookingStatus
+  bookerExternalId String?
+  firstSyncedAt    DateTime        @default(now())
+  lastSyncedAt     DateTime        @default(now())
+
+  club         Club                 @relation(fields: [clubId], references: [id])
+  participants BookingParticipant[]
+
+  /// Clé d'idempotence de la synchronisation.
+  @@unique([provider, clubId, externalId])
+  @@index([clubId, startsAt])
+}
+
+model BookingParticipant {
+  id               String @id @default(uuid()) @db.Uuid
+  bookingId        String @db.Uuid
+  externalPlayerId String
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, externalPlayerId])
+}
+
+model SyncRun {
+  id              String     @id @default(uuid()) @db.Uuid
+  clubId          String     @db.Uuid
+  status          SyncStatus
+  startedAt       DateTime   @default(now())
+  finishedAt      DateTime?
+  bookingsFetched Int        @default(0)
+  entriesCreated  Int        @default(0)
+  error           String?
+  triggeredById   String?    @db.Uuid
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, startedAt])
+}
+
+// ─────────────────────────────── Règles & ledger ───────────────────────────────
+
+/// Règles GPR globales, versionnées : la version la plus récente est active.
+model RuleSet {
+  id                  String   @id @default(uuid()) @db.Uuid
+  version             Int      @unique
+  pointsPerSlot       Int
+  slotMinutes         Int
+  dailyCapPerPlayer   Int
+  pendingDelayMinutes Int
+  expirationMonths    Int
+  offPeakMultiplier   Decimal  @db.Decimal(4, 2)
+  /// [{ days: [1..7], start: "HH:mm", end: "HH:mm" }] en heure locale du club
+  offPeakWindows      Json
+  /// [{ code, label, minGpr }]
+  levels              Json
+  createdById         String?  @db.Uuid
+  createdAt           DateTime @default(now())
+}
+
+/// Grand livre IMMUABLE (trigger SQL bloquant UPDATE/DELETE). Le solde = somme des montants.
+/// Statut « en attente » / « validé » déduit de availableAt (pas de mutation).
+model LedgerEntry {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  type             LedgerType
+  /// Montant signé en GPR (+ gain, − rachat / expiration / annulation).
+  amount           Int
+  sourceType       LedgerSourceType
+  sourceId         String?
+  /// Garantit qu'une même source ne crédite jamais deux fois.
+  idempotencyKey   String           @unique
+  clubId           String?          @db.Uuid
+  reason           String?
+  authorId         String?          @db.Uuid
+  reversesEntryId  String?          @db.Uuid
+  ruleSetVersion   Int?
+  earnedAt         DateTime
+  availableAt      DateTime
+  expiresAt        DateTime?
+  createdAt        DateTime         @default(now())
+
+  user     User         @relation("LedgerOwner", fields: [userId], references: [id])
+  club     Club?        @relation(fields: [clubId], references: [id])
+  reverses LedgerEntry? @relation("Reversal", fields: [reversesEntryId], references: [id])
+  reversedBy LedgerEntry[] @relation("Reversal")
+  coupon   Coupon?
+
+  @@index([userId, earnedAt])
+  @@index([clubId, earnedAt])
+  @@index([sourceType, sourceId])
+}
+
+// ─────────────────────────────── Récompenses ───────────────────────────────
+
+model Reward {
+  id                 String         @id @default(uuid()) @db.Uuid
+  clubId             String         @db.Uuid
+  category           RewardCategory
+  kind               RewardKind
+  title              String
+  description        String?
+  costGpr            Int
+  /// % (1-100) pour DISCOUNT_PERCENT, centimes pour DISCOUNT_AMOUNT, null pour FREE_ITEM.
+  discountValue      Int?
+  /// null = stock illimité
+  stock              Int?
+  startsAt           DateTime?
+  endsAt             DateTime?
+  couponValidityDays Int            @default(30)
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  club    Club     @relation(fields: [clubId], references: [id])
+  coupons Coupon[]
+
+  @@index([clubId, isActive])
+}
+
+/// Coupon QR à usage unique, généré lors d'un rachat (lié à l'écriture REDEEM du ledger).
+model Coupon {
+  id            String       @id @default(uuid()) @db.Uuid
+  code          String       @unique
+  userId        String       @db.Uuid
+  rewardId      String       @db.Uuid
+  clubId        String       @db.Uuid
+  ledgerEntryId String       @unique @db.Uuid
+  status        CouponStatus @default(ACTIVE)
+  expiresAt     DateTime
+  usedAt        DateTime?
+  validatedById String?      @db.Uuid
+  createdAt     DateTime     @default(now())
+
+  user        User        @relation("CouponOwner", fields: [userId], references: [id])
+  reward      Reward      @relation(fields: [rewardId], references: [id])
+  club        Club        @relation(fields: [clubId], references: [id])
+  ledgerEntry LedgerEntry @relation(fields: [ledgerEntryId], references: [id])
+
+  @@index([userId, status])
+  @@index([clubId, status])
+}
+
+// ─────────────────────────────── Gamification ───────────────────────────────
+
+/// Défi générique = déclencheur + condition + période + récompense. clubId null = défi groupement.
+model Challenge {
+  id            String          @id @default(uuid()) @db.Uuid
+  clubId        String?         @db.Uuid
+  name          String
+  description   String
+  /// ex. "BOOKING_COMPLETED"
+  trigger       String
+  /// ex. { "type": "COUNT", "target": 3 } — interprété par le moteur (phase 5)
+  condition     Json
+  period        ChallengePeriod
+  startsAt      DateTime
+  endsAt        DateTime?
+  rewardGpr     Int?
+  rewardBadgeId String?         @db.Uuid
+  isActive      Boolean         @default(true)
+  createdById   String?         @db.Uuid
+  createdAt     DateTime        @default(now())
+
+  club        Club?               @relation(fields: [clubId], references: [id])
+  rewardBadge Badge?              @relation(fields: [rewardBadgeId], references: [id])
+  progress    ChallengeProgress[]
+}
+
+model ChallengeProgress {
+  id          String    @id @default(uuid()) @db.Uuid
+  challengeId String    @db.Uuid
+  userId      String    @db.Uuid
+  /// ex. "2026-W47", "2026-11"
+  periodKey   String
+  progress    Json
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId, periodKey])
+}
+
+model Badge {
+  id          String @id @default(uuid()) @db.Uuid
+  code        String @unique
+  name        String
+  description String
+  icon        String
+
+  challenges Challenge[]
+  awarded    PlayerBadge[]
+}
+
+model PlayerBadge {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  badgeId     String   @db.Uuid
+  challengeId String?  @db.Uuid
+  awardedAt   DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id])
+
+  @@unique([userId, badgeId])
+}
+
+// ─────────────────────────────── Audit & analytics ───────────────────────────────
+
+/// Journal d'audit immuable : qui a fait quoi.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @db.Uuid
+  actorRole  Role?
+  action     String
+  entityType String
+  entityId   String?
+  clubId     String?  @db.Uuid
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([clubId, createdAt])
+  @@index([entityType, entityId])
+}
+
+/// Événements produit pour les statistiques super admin (partie jouée, rachat, connexion…).
+model AnalyticsEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  type       String
+  userId     String?  @db.Uuid
+  clubId     String?  @db.Uuid
+  payload    Json     @default("{}")
+  occurredAt DateTime @default(now())
+
+  @@index([type, occurredAt])
+  @@index([clubId, occurredAt])
+}
