@@ -24,7 +24,13 @@ export class SmtpMailService extends MailService {
     this.transporter = createTransport({
       host: config.get('SMTP_HOST', { infer: true }),
       port: config.get('SMTP_PORT', { infer: true }),
-      secure: false,
+      secure: config.get('SMTP_SECURE', { infer: true }),
+      auth: config.get('SMTP_USER', { infer: true })
+        ? {
+            user: config.get('SMTP_USER', { infer: true })!,
+            pass: config.get('SMTP_PASS', { infer: true }) ?? '',
+          }
+        : undefined,
     });
     this.from = config.get('SMTP_FROM', { infer: true });
   }

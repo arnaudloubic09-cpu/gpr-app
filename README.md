@@ -95,7 +95,8 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
   du club principal. Centre de notifications dans l'app ; push uniquement avec consentement
   (`PUSH_PROVIDER=expo` en production, compte Expo/EAS requis).
 - **RGPD** : consentements historisés, export par email, suppression avec 30 jours de rétractation puis anonymisation.
-- Lancer une tâche à la demande : `pnpm --filter @gpr/api job gamification|expire|coupons-expire|gdpr-deletions`.
+- Lancer une tâche à la demande : `pnpm --filter @gpr/api job gamification|expire|coupons-expire|gdpr-deletions|vip`
+  (en production : `node dist/cli/run-job.js <tâche>`).
 
 ## Carte VIP et partenaires
 

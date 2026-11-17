@@ -23,4 +23,22 @@ describe('validateEnv', () => {
   it('refuse un secret JWT trop court', () => {
     expect(() => validateEnv({ ...base, JWT_ACCESS_SECRET: 'court' })).toThrow(/JWT_ACCESS_SECRET/);
   });
+
+  it('refuse une configuration de production incomplète', () => {
+    expect(() => validateEnv({ ...base, NODE_ENV: 'production' })).toThrow(
+      /CORS_ORIGINS[\s\S]*SMTP_HOST/,
+    );
+  });
+
+  it('accepte une configuration de production complète', () => {
+    const env = validateEnv({
+      ...base,
+      NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://admin.gpr.example',
+      SMTP_HOST: 'smtp-relay.example.com',
+      SMTP_USER: 'u',
+      SMTP_PASS: 'p',
+    });
+    expect(env.NODE_ENV).toBe('production');
+  });
 });

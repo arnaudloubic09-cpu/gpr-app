@@ -1,0 +1,23 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# API (app mobile et back-office)
+{$API_DOMAIN} {
+	encode gzip
+	reverse_proxy api:3000
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}
+
+# Back-office des clubs et du GPR
+{$ADMIN_DOMAIN} {
+	encode gzip
+	reverse_proxy admin:3001
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

@@ -1,19 +1,20 @@
 /**
  * Lance une tâche planifiée à la demande (exploitation, démo, reprise après incident).
  *
- *   pnpm --filter @gpr/api job gamification [--from=2026-09-01]
+ *   pnpm --filter @gpr/api job gamification [--from=2026-09-01]   (développement)
+ *   node dist/cli/run-job.js gamification                            (production)
  *   pnpm --filter @gpr/api job expire | coupons-expire | gdpr-deletions
  */
 import './no-jobs';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { GamificationService } from '../src/gamification/gamification.service';
-import { GdprService } from '../src/gamification/gdpr.service';
-import { LedgerService } from '../src/ledger/ledger.service';
-import { PrismaService } from '../src/prisma/prisma.service';
-import { CouponsService } from '../src/rewards/coupons.service';
-import { VipService } from '../src/vip/vip.service';
+import { AppModule } from '../app.module';
+import { GamificationService } from '../gamification/gamification.service';
+import { GdprService } from '../gamification/gdpr.service';
+import { LedgerService } from '../ledger/ledger.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { CouponsService } from '../rewards/coupons.service';
+import { VipService } from '../vip/vip.service';
 
 async function main() {
   const [job, ...args] = process.argv.slice(2);
