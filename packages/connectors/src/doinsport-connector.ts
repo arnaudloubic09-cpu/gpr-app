@@ -18,6 +18,9 @@ import type {
  *  - endpoint de liste des réservations terminées / annulées sur une période ;
  *  - exposition (ou non) des participants ;
  *  - correspondance d'un joueur par email / téléphone ;
+ *  - ANNULATIONS (critique) : vérifier comment l'API expose une annulation faite dans le logiciel
+ *    de réservation (statut « annulée » ou réservation supprimée qui disparaît des résultats).
+ *    Si elle disparaît, la synchro devra traiter les réservations « disparues » comme annulées ;
  *  - correspondance des statuts Doinsport → BookingStatus ;
  *  - limites de débit et pagination.
  */
