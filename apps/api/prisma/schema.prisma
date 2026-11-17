@@ -38,6 +38,7 @@ enum LedgerType {
   REDEEM
   EXPIRE
   REVERSAL
+  REFUND
   ADJUST
 }
 
@@ -280,6 +281,8 @@ model RuleSet {
   dailyCapPerPlayer   Int?
   pendingDelayMinutes Int
   expirationMonths    Int
+  /// Validité d'un coupon de récompense (jours) — fixée par le GPR
+  couponValidityDays  Int      @default(7)
   offPeakMultiplier   Decimal  @db.Decimal(4, 2)
   /// [{ days: [1..7], start: "HH:mm", end: "HH:mm" }] en heure locale du club
   offPeakWindows      Json
@@ -338,7 +341,6 @@ model Reward {
   stock              Int?
   startsAt           DateTime?
   endsAt             DateTime?
-  couponValidityDays Int            @default(30)
   isActive           Boolean        @default(true)
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
@@ -360,6 +362,8 @@ model Coupon {
   status        CouponStatus @default(ACTIVE)
   expiresAt     DateTime
   usedAt        DateTime?
+  /// Date d'annulation (par le joueur ou le club) ou d'expiration, avec remboursement
+  closedAt      DateTime?
   validatedById String?      @db.Uuid
   createdAt     DateTime     @default(now())
 

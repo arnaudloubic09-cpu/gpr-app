@@ -33,6 +33,7 @@ export const LedgerType = {
   REDEEM: 'REDEEM',
   EXPIRE: 'EXPIRE',
   REVERSAL: 'REVERSAL',
+  REFUND: 'REFUND',
   ADJUST: 'ADJUST',
 } as const;
 export type LedgerType = (typeof LedgerType)[keyof typeof LedgerType];

@@ -86,6 +86,7 @@ async function main() {
     dailyCapPerPlayer: r.dailyCapPerPlayer,
     pendingDelayMinutes: r.pendingDelayMinutes,
     expirationMonths: r.expirationMonths,
+    couponValidityDays: r.couponValidityDays,
     offPeakMultiplier: r.offPeakMultiplier,
     offPeakWindows: r.offPeakWindows as unknown as Prisma.InputJsonValue,
     levels: r.levels as unknown as Prisma.InputJsonValue,

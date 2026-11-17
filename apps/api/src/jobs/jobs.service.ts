@@ -4,6 +4,7 @@ import { Job, Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import type { Env } from '../config/env';
 import { LedgerService } from '../ledger/ledger.service';
+import { CouponsService } from '../rewards/coupons.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncService } from '../sync/sync.service';
 
@@ -13,7 +14,8 @@ type JobData = { clubId?: string };
 /**
  * Tâches planifiées (BullMQ + Redis) :
  *  - synchronisation de chaque club selon sa fréquence (syncIntervalMinutes) ;
- *  - expiration quotidienne des points GPR (3 h 15, heure de Paris).
+ *  - expiration quotidienne des points GPR (3 h 15, heure de Paris) ;
+ *  - toutes les heures : coupons non utilisés arrivés à expiration → remboursement.
  * Désactivé quand JOBS_ENABLED=false (tests).
  */
 @Injectable()
@@ -28,6 +30,7 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     private readonly prisma: PrismaService,
     private readonly sync: SyncService,
     private readonly ledger: LedgerService,
+    private readonly coupons: CouponsService,
   ) {}
 
   async onModuleInit() {
@@ -72,6 +75,7 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
       return res.status;
     }
     if (job.name === 'expire') return this.ledger.runExpirations();
+    if (job.name === 'coupons-expire') return this.coupons.expireDue();
   }
 
   async onApplicationShutdown() {

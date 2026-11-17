@@ -10,6 +10,7 @@ const TYPE_LABELS: Record<LedgerType, string> = {
   REDEEM: 'Récompense échangée',
   EXPIRE: 'Points GPR expirés',
   REVERSAL: 'Annulation de partie',
+  REFUND: 'Coupon remboursé',
   ADJUST: 'Ajustement manuel',
 };
 
@@ -79,7 +80,7 @@ export class LedgerService {
 
   /**
    * Écrit les expirations dues (FIFO, 12 mois après le gain). Idempotent :
-   * clé `expire:<lot>` unique, une expiration n'est jamais écrite deux fois.
+   * clé `expire:<lot>:<séquence>` unique, une expiration n'est jamais écrite deux fois.
    */
   async runExpirations(
     now = new Date(),
@@ -101,7 +102,7 @@ export class LedgerService {
           amount: -d.amount,
           sourceType: 'EXPIRATION' as const,
           sourceId: d.lotEntryId,
-          idempotencyKey: `expire:${d.lotEntryId}`,
+          idempotencyKey: `expire:${d.lotEntryId}:${d.sequence}`,
           earnedAt: now,
           availableAt: now,
         })),

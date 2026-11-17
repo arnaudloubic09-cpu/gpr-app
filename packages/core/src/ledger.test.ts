@@ -96,7 +96,7 @@ describe('expiration FIFO', () => {
     const redeem = debit('REDEEM', 30, '2026-03-01T10:00:00Z');
     expect(computeExpirations([old, redeem], d('2026-10-31T00:00:00Z'))).toEqual([]);
     expect(computeExpirations([old, redeem], d('2026-11-02T00:00:00Z'))).toEqual([
-      { lotEntryId: old.id, amount: 20 },
+      { lotEntryId: old.id, amount: 20, sequence: 0 },
     ]);
   });
 
@@ -122,5 +122,39 @@ describe('expiration FIFO', () => {
     expect(computeBalance([e, redeem, reversal, later], d('2026-11-06T00:00:00Z')).available).toBe(
       20,
     );
+  });
+});
+
+describe('remboursement d’un coupon (REFUND)', () => {
+  it('restitue les points sur les lots d’origine, avec leur date d’expiration', () => {
+    const old = earn(50, '2025-12-01T10:00:00Z');
+    const recent = earn(50, '2026-06-01T10:00:00Z');
+    const redeem = debit('REDEEM', 80, '2026-07-01T10:00:00Z');
+    const refund: LedgerEntryLike = {
+      ...earn(80, '2026-07-02T10:00:00Z'),
+      type: 'REFUND',
+      reversesEntryId: redeem.id,
+      expiresAt: null,
+    };
+    const { lots } = allocateLots([old, recent, redeem, refund]);
+    expect(lots.find((l) => l.entryId === old.id)!.remaining).toBe(50);
+    expect(lots.find((l) => l.entryId === recent.id)!.remaining).toBe(50);
+    expect(lots.some((l) => l.entryId === refund.id)).toBe(false);
+    expect(computeBalance([old, recent, redeem, refund], d('2026-07-03T00:00:00Z')).available).toBe(
+      100,
+    );
+  });
+
+  it('un lot restitué après sa date d’expiration expire à nouveau (nouvelle séquence)', () => {
+    const lot = earn(50, '2025-11-01T10:00:00Z');
+    const redeem = debit('REDEEM', 50, '2026-10-30T10:00:00Z');
+    const refund: LedgerEntryLike = {
+      ...earn(50, '2026-11-05T10:00:00Z'),
+      type: 'REFUND',
+      reversesEntryId: redeem.id,
+      expiresAt: null,
+    };
+    const due = computeExpirations([lot, redeem, refund], d('2026-11-06T00:00:00Z'));
+    expect(due).toEqual([{ lotEntryId: lot.id, amount: 50, sequence: 0 }]);
   });
 });

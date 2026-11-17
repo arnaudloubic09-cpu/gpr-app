@@ -7,7 +7,9 @@ import { ClubsModule } from './clubs/clubs.module';
 import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env';
 import { HealthController } from './health/health.controller';
+import { ConnectorsModule } from './connectors/connectors.module';
 import { LedgerModule } from './ledger/ledger.module';
+import { RewardsModule } from './rewards/rewards.module';
 import { RulesModule } from './rules/rules.module';
 import { SyncModule } from './sync/sync.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -25,6 +27,8 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     RulesModule,
     LedgerModule,
+    ConnectorsModule,
+    RewardsModule,
     UsersModule,
     ClubsModule,
     SyncModule,

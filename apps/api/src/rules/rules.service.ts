@@ -21,6 +21,7 @@ export class RulesService {
       dailyCapPerPlayer: rs.dailyCapPerPlayer,
       pendingDelayMinutes: rs.pendingDelayMinutes,
       expirationMonths: rs.expirationMonths,
+      couponValidityDays: rs.couponValidityDays,
       offPeakMultiplier: Number(rs.offPeakMultiplier),
       offPeakWindows: rs.offPeakWindows as unknown as OffPeakWindow[],
       levels: rs.levels as unknown as LevelThreshold[],

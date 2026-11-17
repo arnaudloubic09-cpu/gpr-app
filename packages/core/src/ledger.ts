@@ -7,7 +7,9 @@ import type { LedgerType } from './enums';
  *  - « en attente » : écriture dont availableAt est dans le futur (crédit à H+2) ;
  *  - expiration FIFO : chaque gain forme un « lot » qui expire à expiresAt ;
  *    les rachats consomment d'abord les lots qui expirent le plus tôt ;
- *  - une annulation (REVERSAL) ou une expiration (EXPIRE) vise un lot précis.
+ *  - une annulation (REVERSAL) ou une expiration (EXPIRE) vise un lot précis ;
+ *  - un remboursement (REFUND, coupon annulé ou non utilisé) restitue exactement les lots
+ *    consommés par le rachat d'origine, avec leurs dates d'expiration d'origine.
  */
 
 export interface LedgerEntryLike {
@@ -18,7 +20,7 @@ export interface LedgerEntryLike {
   availableAt: Date;
   expiresAt: Date | null;
   createdAt: Date;
-  /** Pour REVERSAL : l'écriture annulée. */
+  /** Pour REVERSAL : l'écriture annulée. Pour REFUND : le rachat (REDEEM) remboursé. */
   reversesEntryId?: string | null;
   /** Pour EXPIRE : l'identifiant du lot expiré. */
   sourceId?: string | null;
@@ -52,8 +54,12 @@ export function allocateLots(entries: LedgerEntryLike[]): Allocation {
   const lots = new Map<string, Lot>();
   let deficit = 0;
 
-  const consumeFifo = (amount: number, at: Date) => {
+  /** Pour chaque débit FIFO : les lots consommés (utilisé par les remboursements). */
+  const consumption = new Map<string, { lotId: string; amount: number }[]>();
+
+  const consumeFifo = (amount: number, at: Date, debitId?: string) => {
     let left = amount;
+    const taken: { lotId: string; amount: number }[] = [];
     const eligible = [...lots.values()]
       .filter((l) => l.remaining > 0 && l.availableAt <= at && (!l.expiresAt || l.expiresAt > at))
       .sort(
@@ -66,8 +72,22 @@ export function allocateLots(entries: LedgerEntryLike[]): Allocation {
       const take = Math.min(lot.remaining, left);
       lot.remaining -= take;
       left -= take;
+      if (take > 0) taken.push({ lotId: lot.entryId, amount: take });
     }
     deficit += left;
+    if (debitId) consumption.set(debitId, taken);
+  };
+
+  const refund = (redeemId: string | null | undefined, amount: number) => {
+    let left = amount;
+    for (const t of (redeemId && consumption.get(redeemId)) || []) {
+      const lot = lots.get(t.lotId)!;
+      const back = Math.min(t.amount, left);
+      lot.remaining += back;
+      left -= back;
+    }
+    // Part éventuellement non rattachable à un lot : réduit d'abord un déficit.
+    deficit = Math.max(0, deficit - left);
   };
 
   const consumeLot = (lotId: string | null | undefined, amount: number, at: Date) => {
@@ -92,10 +112,14 @@ export function allocateLots(entries: LedgerEntryLike[]): Allocation {
       });
       continue;
     }
+    if (e.type === 'REFUND') {
+      refund(e.reversesEntryId, e.amount);
+      continue;
+    }
     const debit = -e.amount;
     if (e.type === 'REVERSAL') consumeLot(e.reversesEntryId, debit, e.createdAt);
     else if (e.type === 'EXPIRE') consumeLot(e.sourceId, debit, e.createdAt);
-    else consumeFifo(debit, e.createdAt); // REDEEM, ADJUST négatif
+    else consumeFifo(debit, e.createdAt, e.id); // REDEEM, ADJUST négatif
   }
 
   return { lots: [...lots.values()], deficit };
@@ -104,13 +128,24 @@ export function allocateLots(entries: LedgerEntryLike[]): Allocation {
 export interface ExpirationDue {
   lotEntryId: string;
   amount: number;
+  /** Nombre d'expirations déjà écrites pour ce lot (sert à la clé d'idempotence). */
+  sequence: number;
 }
 
 /** Lots arrivés à expiration avec un reste non dépensé : écritures EXPIRE à créer. */
 export function computeExpirations(entries: LedgerEntryLike[], now: Date): ExpirationDue[] {
+  const expiredCount = new Map<string, number>();
+  for (const e of entries) {
+    if (e.type === 'EXPIRE' && e.sourceId)
+      expiredCount.set(e.sourceId, (expiredCount.get(e.sourceId) ?? 0) + 1);
+  }
   return allocateLots(entries)
     .lots.filter((l) => l.remaining > 0 && l.expiresAt && l.expiresAt <= now)
-    .map((l) => ({ lotEntryId: l.entryId, amount: l.remaining }));
+    .map((l) => ({
+      lotEntryId: l.entryId,
+      amount: l.remaining,
+      sequence: expiredCount.get(l.entryId) ?? 0,
+    }));
 }
 
 export interface Balance {
