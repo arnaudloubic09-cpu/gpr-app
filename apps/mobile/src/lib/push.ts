@@ -59,6 +59,8 @@ export function screenFor(data: Record<string, unknown> | undefined): string {
       return '/challenges';
     case 'rewards':
       return '/rewards';
+    case 'vip':
+      return '/vip';
     case 'coupon':
       return typeof data.couponId === 'string' ? `/coupon/${data.couponId}` : '/coupons';
     default:

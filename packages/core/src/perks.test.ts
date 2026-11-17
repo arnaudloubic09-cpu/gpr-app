@@ -91,3 +91,12 @@ describe('parseCounterCode', () => {
     expect(parseCounterCode('GPR?)è_é(),Q,W')).toEqual({ kind: 'member', code: 'GPRM-7825-MAMZ' });
   });
 });
+
+import { parseCodeList } from './vip';
+describe('parseCodeList (import des codes partenaires)', () => {
+  it('accepte une ligne par code, des virgules ou points-virgules, et supprime les doublons et lignes vides', () => {
+    expect(
+      parseCodeList('PADEL-AAA1\nPADEL-AAA2\r\n\nPADEL-AAA1; PADEL-AAA3 ,PADEL-AAA4\tx'),
+    ).toEqual(['PADEL-AAA1', 'PADEL-AAA2', 'PADEL-AAA3', 'PADEL-AAA4']);
+  });
+});

@@ -7,6 +7,7 @@ import { AnalyticsService } from '../common/analytics/analytics.service';
 import { AuditService } from '../common/audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RulesService } from '../rules/rules.service';
+import { VipService } from '../vip/vip.service';
 import { LevelService } from './level.service';
 
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -21,6 +22,7 @@ export class PerksService {
     private readonly levels: LevelService,
     private readonly audit: AuditService,
     private readonly analytics: AnalyticsService,
+    private readonly vip: VipService,
   ) {}
 
   // ── Administration (club) ──
@@ -111,8 +113,10 @@ export class PerksService {
       }),
     ]);
     const nextLevel = level.next;
+    const vip = await this.vip.status(userId);
     return {
       memberCode,
+      vip: vip.enabled ? { active: vip.active, until: vip.until } : null,
       firstName: user.firstName,
       lastName: user.lastName,
       level,

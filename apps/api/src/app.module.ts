@@ -17,6 +17,7 @@ import { SuperAdminModule } from './super-admin/super-admin.module';
 import { SyncModule } from './sync/sync.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
+import { VipModule } from './vip/vip.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     ConnectorsModule,
     RewardsModule,
     GamificationModule,
+    VipModule,
     UsersModule,
     ClubsModule,
     ClubAdminModule,

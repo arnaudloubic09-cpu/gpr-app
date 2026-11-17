@@ -97,6 +97,21 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
 - **RGPD** : consentements historisés, export par email, suppression avec 30 jours de rétractation puis anonymisation.
 - Lancer une tâche à la demande : `pnpm --filter @gpr/api job gamification|expire|coupons-expire|gdpr-deletions`.
 
+## Carte VIP et partenaires
+
+- **Désactivée au lancement** : le super admin l'active dans _Carte VIP et partenaires_ quand les partenariats
+  sont prêts. Désactivée, elle est invisible pour les joueurs et aucune carte n'est attribuée.
+- Accès gratuit pendant 1 an au **niveau Platine** (prolongé s'il l'est toujours à l'échéance) ; achat simple
+  d'un an à 60 € (paiement en ligne à brancher à l'activation : compte Stripe du GPR, CGV) ; en attendant,
+  **attribution manuelle** depuis la fiche joueur (cadeau, vente au comptoir).
+- Partenaires : offre, site, import des listes de codes (un par ligne, doublons ignorés). Chaque code n'est
+  attribué qu'une fois, valable 7 jours ; autant de codes que le membre veut (plafond facultatif par partenaire) ;
+  alerte email au GPR quand il reste moins de 20 codes.
+
+## Documentation des API de réservation
+
+Questions à poser à Playtomic et Doinsport : [docs/questions-fournisseurs-api.md](docs/questions-fournisseurs-api.md).
+
 ## Tests
 
 ```bash

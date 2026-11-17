@@ -13,6 +13,7 @@ import { GdprService } from '../src/gamification/gdpr.service';
 import { LedgerService } from '../src/ledger/ledger.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CouponsService } from '../src/rewards/coupons.service';
+import { VipService } from '../src/vip/vip.service';
 
 async function main() {
   const [job, ...args] = process.argv.slice(2);
@@ -38,6 +39,9 @@ async function main() {
       case 'coupons-expire':
         await app.get(GamificationService).couponReminders();
         console.log({ refunded: await app.get(CouponsService).expireDue() });
+        break;
+      case 'vip':
+        console.log({ granted: await app.get(VipService).grantPlatinum() });
         break;
       case 'gdpr-deletions':
         console.log({ anonymized: await app.get(GdprService).runDueDeletions() });

@@ -126,6 +126,8 @@ model User {
   progress      ChallengeProgress[]
   badges        PlayerBadge[]
   pushTokens    PushToken[]
+  vipMemberships VipMembership[]
+  partnerCodes  PartnerCode[]
   notifications Notification[]
 
   @@index([role])
@@ -559,4 +561,76 @@ model LevelPerk {
   club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
 
   @@index([clubId, isActive])
+}
+
+// ─────────────────────────────── Carte VIP & partenaires ───────────────────────────────
+
+/// Réglages globaux modifiables par le super admin (ex. activation de la carte VIP).
+model AppSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @db.Uuid
+  updatedAt   DateTime @updatedAt
+}
+
+enum VipSource {
+  PLATINUM
+  PURCHASE
+  MANUAL
+}
+
+/// Période de carte VIP (1 an). Le joueur est VIP si une période couvre la date du jour.
+model VipMembership {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  source      VipSource
+  startsAt    DateTime
+  endsAt      DateTime
+  /// Achat : référence du paiement et montant ; attribution manuelle : motif et auteur.
+  paymentRef  String?   @unique
+  amountCents Int?
+  reason      String?
+  grantedById String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, endsAt])
+}
+
+/// Partenaire extérieur (site en ligne, marque…) offrant des codes promo aux membres VIP.
+model Partner {
+  id                String    @id @default(uuid()) @db.Uuid
+  name              String
+  offer             String
+  description       String?
+  websiteUrl        String?
+  /// Plafond de codes par membre VIP (null = illimité)
+  maxCodesPerMember Int?
+  /// Durée d'affichage d'un code attribué (jours)
+  codeValidityDays  Int       @default(7)
+  isActive          Boolean   @default(true)
+  lowStockAlertAt   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  codes PartnerCode[]
+}
+
+/// Code promo fourni par le partenaire ; attribué une seule fois à un membre VIP.
+model PartnerCode {
+  id           String    @id @default(uuid()) @db.Uuid
+  partnerId    String    @db.Uuid
+  code         String
+  importedAt   DateTime  @default(now())
+  assignedToId String?   @db.Uuid
+  assignedAt   DateTime?
+  expiresAt    DateTime?
+
+  partner    Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  assignedTo User?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@unique([partnerId, code])
+  @@index([partnerId, assignedToId])
+  @@index([assignedToId])
 }

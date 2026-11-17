@@ -6,12 +6,13 @@ import { GLOBAL_SCHEDULES } from './jobs.service';
 describe('Planification des tâches', () => {
   const source = readFileSync(join(__dirname, 'jobs.service.ts'), 'utf8');
 
-  it('prévoit les quatre tâches globales attendues', () => {
+  it('prévoit les tâches globales attendues', () => {
     expect(Object.keys(GLOBAL_SCHEDULES).sort()).toEqual([
       'coupons-expire',
       'expire',
       'gamification',
       'gdpr-deletions',
+      'vip',
     ]);
   });
 

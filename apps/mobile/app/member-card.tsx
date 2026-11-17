@@ -12,6 +12,7 @@ type MemberCard = {
   firstName: string | null;
   lastName: string | null;
   level: LevelStatus;
+  vip: { active: boolean; until: string | null } | null;
   clubs: {
     club: { id: string; name: string };
     perks: { id: string; label: string }[];
@@ -51,6 +52,18 @@ export default function MemberCardScreen() {
         <Text style={{ color: '#fff', marginBottom: space(4) }}>
           {card.data.firstName} {card.data.lastName}
         </Text>
+        {card.data.vip?.active ? (
+          <Text
+            style={{
+              color: '#fbbf24',
+              fontWeight: '900',
+              letterSpacing: 2,
+              marginBottom: space(3),
+            }}
+          >
+            ★ MEMBRE VIP
+          </Text>
+        ) : null}
         <View
           style={{ backgroundColor: '#fff', padding: space(3), borderRadius: radius.md }}
           accessibilityLabel={`QR code de la carte ${card.data.memberCode}`}

@@ -30,6 +30,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const clubs = useApi<Club[]>('/clubs');
   const links = useApi<Link[]>('/me/links');
+  const vip = useApi<{ enabled: boolean; active?: boolean }>('/me/vip');
   const [linkResults, setLinkResults] = useState<LinkResult[] | null>(null);
   const [linking, setLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +77,14 @@ export default function ProfileScreen() {
         icon="card-outline"
         onPress={() => router.push('/member-card')}
       />
+      {vip.data?.enabled ? (
+        <Button
+          label={vip.data.active ? 'Ma carte VIP' : 'Découvrir la carte VIP'}
+          variant="secondary"
+          icon="diamond-outline"
+          onPress={() => router.push('/vip')}
+        />
+      ) : null}
       <View style={{ height: space(3) }} />
 
       <Card>

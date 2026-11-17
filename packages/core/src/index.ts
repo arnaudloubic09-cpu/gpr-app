@@ -8,3 +8,4 @@ export * from './admin';
 export * from './coupon-code';
 export * from './gamification';
 export * from './perks';
+export * from './vip';

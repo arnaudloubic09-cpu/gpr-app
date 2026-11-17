@@ -55,6 +55,7 @@ function Gate() {
       <Stack.Screen name="coupon/[id]" options={{ title: 'Mon coupon' }} />
       <Stack.Screen name="member-card" options={{ title: 'Ma carte de membre' }} />
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
+      <Stack.Screen name="vip" options={{ title: 'Carte VIP' }} />
       <Stack.Screen name="privacy" options={{ title: 'Confidentialité et données' }} />
     </Stack>
   );
