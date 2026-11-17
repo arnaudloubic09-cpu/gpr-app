@@ -7,6 +7,9 @@ import { ClubsModule } from './clubs/clubs.module';
 import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env';
 import { HealthController } from './health/health.controller';
+import { LedgerModule } from './ledger/ledger.module';
+import { RulesModule } from './rules/rules.module';
+import { SyncModule } from './sync/sync.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 
@@ -20,8 +23,11 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     CommonModule,
     AuthModule,
+    RulesModule,
+    LedgerModule,
     UsersModule,
     ClubsModule,
+    SyncModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

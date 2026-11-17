@@ -6,6 +6,32 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/bootstrap';
 import { MailService } from '../src/common/mail/mail.service';
+import { ConnectorRegistry } from '../src/connectors/connector-registry';
+import type { Booking, BookingConnector, Participant } from '@gpr/connectors';
+
+/** Connecteur entièrement piloté par le test. */
+export class FakeConnector implements BookingConnector {
+  readonly provider = 'MOCK' as const;
+  bookings: Booking[] = [];
+  participants: Record<string, Participant[]> = {};
+  failWith: string | null = null;
+  delayMs = 0;
+
+  async listEndedBookings(): Promise<Booking[]> {
+    if (this.delayMs) await new Promise((r) => setTimeout(r, this.delayMs));
+    if (this.failWith) throw new Error(this.failWith);
+    return this.bookings.map((b) => ({ ...b }));
+  }
+  async getBookingParticipants(_c: unknown, id: string): Promise<Participant[]> {
+    return this.participants[id] ?? [];
+  }
+  async matchPlayer() {
+    return null;
+  }
+  setStatus(externalId: string, status: Booking['status']) {
+    this.bookings.find((b) => b.externalId === externalId)!.status = status;
+  }
+}
 
 /** Remplace l'envoi SMTP : capture les codes OTP envoyés. */
 export class CapturingMailService extends MailService {
@@ -18,16 +44,18 @@ export class CapturingMailService extends MailService {
   }
 }
 
-export async function createTestApp() {
+export async function createTestApp(connector?: BookingConnector) {
   const mail = new CapturingMailService();
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(MailService)
-    .useValue(mail)
-    .compile();
+    .useValue(mail);
+  if (connector)
+    builder = builder.overrideProvider(ConnectorRegistry).useValue({ get: () => connector });
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);
   await app.init();
-  return { app, mail };
+  return { app, mail, moduleRef };
 }
 
 export const uniqueEmail = (prefix: string) => `${prefix}-${randomUUID().slice(0, 8)}@test.example`;

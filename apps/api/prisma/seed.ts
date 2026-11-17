@@ -78,20 +78,22 @@ const REWARDS: Record<(typeof CLUBS)[number]['slug'], RewardSeed[]> = {
 async function main() {
   // ── Règles GPR globales (version 1) ──
   const r = DEFAULT_GPR_RULES;
+  // La version 1 reflète toujours les valeurs par défaut validées (avant mise en production).
+  // Ensuite, toute modification passera par une nouvelle version créée par le super admin.
+  const ruleData = {
+    pointsPerSlot: r.pointsPerSlot,
+    slotMinutes: r.slotMinutes,
+    dailyCapPerPlayer: r.dailyCapPerPlayer,
+    pendingDelayMinutes: r.pendingDelayMinutes,
+    expirationMonths: r.expirationMonths,
+    offPeakMultiplier: r.offPeakMultiplier,
+    offPeakWindows: r.offPeakWindows as unknown as Prisma.InputJsonValue,
+    levels: r.levels as unknown as Prisma.InputJsonValue,
+  };
   await prisma.ruleSet.upsert({
     where: { version: 1 },
-    update: {},
-    create: {
-      version: 1,
-      pointsPerSlot: r.pointsPerSlot,
-      slotMinutes: r.slotMinutes,
-      dailyCapPerPlayer: r.dailyCapPerPlayer,
-      pendingDelayMinutes: r.pendingDelayMinutes,
-      expirationMonths: r.expirationMonths,
-      offPeakMultiplier: r.offPeakMultiplier,
-      offPeakWindows: r.offPeakWindows as unknown as Prisma.InputJsonValue,
-      levels: r.levels as unknown as Prisma.InputJsonValue,
-    },
+    update: ruleData,
+    create: { version: 1, ...ruleData },
   });
 
   // ── Super admin ──
@@ -179,8 +181,15 @@ async function main() {
       where: {
         provider_externalPlayerId: { provider: 'MOCK', externalPlayerId: `mock-player-${i}` },
       },
-      update: {},
-      create: { userId: player.id, provider: 'MOCK', externalPlayerId: `mock-player-${i}` },
+      update: { linkedAt: new Date(Date.now() - 120 * 86_400_000) },
+      // Comptes liés il y a 120 jours : pas de rétroactivité, seules les parties jouées
+      // après la liaison rapportent des points GPR.
+      create: {
+        userId: player.id,
+        provider: 'MOCK',
+        externalPlayerId: `mock-player-${i}`,
+        linkedAt: new Date(Date.now() - 120 * 86_400_000),
+      },
     });
   }
 

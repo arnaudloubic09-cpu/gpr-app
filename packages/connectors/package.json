@@ -5,11 +5,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"(connecteurs : tests en phase 2)\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@gpr/core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.7"
   }
 }

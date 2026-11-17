@@ -20,6 +20,14 @@ const envSchema = z.object({
       (v) => Buffer.from(v, 'base64').length === 32,
       'Clé AES-256 attendue : 32 octets en base64',
     ),
+  REDIS_URL: z.string().default('redis://localhost:6379'),
+  /** Active la planification (synchro périodique, expiration). Désactivé dans les tests. */
+  JOBS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  /** Fenêtre de relecture à chaque synchro, pour capter les annulations / absences tardives. */
+  SYNC_LOOKBACK_DAYS: z.coerce.number().int().positive().default(7),
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),
   SMTP_FROM: z.string().default('GPR <no-reply@gpr.local>'),

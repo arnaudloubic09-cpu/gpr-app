@@ -40,6 +40,19 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
 | Admin Smash Club Bordeaux  | `admin.bordeaux@gpr.example`                    | back-office |
 | Joueurs                    | `joueur01@gpr.example` … `joueur30@gpr.example` | app mobile  |
 
+## Moteur de points GPR (phase 2)
+
+- **Barème** : 10 points GPR par 30 min, au prorata (75 min = 25 points GPR), sans plafond journalier.
+- **Heures creuses** : lun–ven avant 12 h et 14 h–17 h (heure locale du club), points ×2 au prorata des minutes,
+  si le club a activé le bonus. Le bonus est une écriture distincte (`BONUS`) pour les statistiques.
+- **Crédit** : participants identifiés (à défaut, le réservataire), points « en attente » jusqu'à H+2.
+  Pas de rétroactivité : seules les parties terminées après la liaison du compte comptent.
+- **Annulation / absence** : 0 point ; si déjà crédité, écriture `REVERSAL`.
+- **Expiration** : 12 mois après le gain, en FIFO (tâche quotidienne à 3 h 15).
+- **Synchronisation** : BullMQ, selon la fréquence de chaque club ; idempotente ; relance manuelle
+  `POST /clubs/:id/sync` (super admin) ; historique `GET /clubs/:id/sync-runs`.
+- **Joueur** : `GET /me/balance`, `GET /me/transactions`.
+
 ## Tests
 
 ```bash

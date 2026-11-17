@@ -276,7 +276,8 @@ model RuleSet {
   version             Int      @unique
   pointsPerSlot       Int
   slotMinutes         Int
-  dailyCapPerPlayer   Int
+  /// null = pas de plafond journalier
+  dailyCapPerPlayer   Int?
   pendingDelayMinutes Int
   expirationMonths    Int
   offPeakMultiplier   Decimal  @db.Decimal(4, 2)
