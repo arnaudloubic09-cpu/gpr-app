@@ -76,3 +76,12 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Image app web (préproduction)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/mobile/Dockerfile.web
+          push: false
+          build-args: EXPO_PUBLIC_API_URL=https://api.preprod.gpr-padel.fr
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

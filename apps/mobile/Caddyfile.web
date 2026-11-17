@@ -1,0 +1,8 @@
+:80 {
+	root * /srv
+	encode gzip
+	# Application monopage : toutes les routes renvoient index.html
+	try_files {path} /index.html
+	file_server
+	header /_expo/* Cache-Control "public, max-age=31536000, immutable"
+}

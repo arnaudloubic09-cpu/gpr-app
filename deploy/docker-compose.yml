@@ -19,6 +19,7 @@ services:
       ACME_EMAIL: ${ACME_EMAIL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${GPR_STATE_DIR:-.}/sites:/etc/caddy/sites:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on: [api, admin]
@@ -31,7 +32,7 @@ services:
         args: { NODE_IMAGE: '${NODE_IMAGE:-node:22-bookworm-slim}' },
       }
     restart: unless-stopped
-    env_file: .env
+    env_file: ${GPR_ENV_FILE:-.env}
     environment:
       NODE_ENV: production
       TRUST_PROXY: '1'
@@ -50,6 +51,17 @@ services:
     environment:
       API_URL: http://api:3000
     depends_on: [api]
+
+  webapp:
+    # Version web de l'app joueur (préproduction) : https://APP_DOMAIN
+    build:
+      context: ..
+      dockerfile: apps/mobile/Dockerfile.web
+      args:
+        NODE_IMAGE: '${NODE_IMAGE:-node:22-bookworm-slim}'
+        EXPO_PUBLIC_API_URL: 'https://${API_DOMAIN}'
+    restart: unless-stopped
+    profiles: ['webapp']
 
   redis:
     # File des tâches planifiées (synchronisations, expirations…) ; persistance AOF

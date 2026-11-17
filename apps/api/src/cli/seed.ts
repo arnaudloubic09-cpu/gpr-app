@@ -2,13 +2,14 @@
  * Données de démonstration : 2 clubs fictifs, 1 super admin, 1 admin par club, 30 joueurs,
  * règles GPR par défaut, catalogue de récompenses, badges et défis d'exemple.
  * Idempotent (upserts) : peut être relancé sans dupliquer les données.
- * Les réservations simulées seront produites par le MockConnector (phase 2).
+ * Les réservations simulées sont produites par le MockConnector.
+ *
+ *   développement : pnpm db:seed          production / préproduction : node dist/cli/seed.js
  */
-import 'dotenv/config';
 import { faker } from '@faker-js/faker/locale/fr';
 import { Prisma, PrismaClient, Role } from '@prisma/client';
 import { DEFAULT_GPR_RULES, validateRewardConfig } from '@gpr/core';
-import { CryptoService } from '../src/common/crypto/crypto.service';
+import { CryptoService } from '../common/crypto/crypto.service';
 
 const prisma = new PrismaClient();
 const crypto = new CryptoService({ get: () => process.env.CONNECTOR_ENCRYPTION_KEY } as never);

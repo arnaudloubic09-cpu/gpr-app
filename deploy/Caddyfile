@@ -21,3 +21,7 @@
 		-Server
 	}
 }
+
+
+# Sites optionnels (ex. version web de l'app en préproduction), générés par deploy/remote-deploy.sh
+import /etc/caddy/sites/*.caddy

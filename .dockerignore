@@ -7,5 +7,4 @@
 **/.env
 **/.env.*
 .git
-apps/mobile
 docs

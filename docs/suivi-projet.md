@@ -17,6 +17,12 @@ Il est mis à jour à chaque étape.
 | 8   | Validation en préproduction par au moins un club (parcours complet)                                                                                  | GPR + clubs            | Après la mise en ligne des tests      |
 | 9   | Sauvegardes de production activées **et** restauration testée                                                                                        | Claude                 | À la mise en production               |
 
+## Préproduction (tests)
+
+- Hébergement : **Oracle Cloud « Always Free »** (région France) ; domaine **gpr-padel.fr** chez OVH ; emails **Brevo**.
+- Adresses : `admin.preprod.gpr-padel.fr`, `app.preprod.gpr-padel.fr` (app web), `api.preprod.gpr-padel.fr`.
+- Mise en ligne et mises à jour : GitHub → Actions → **Déployer la préproduction** (guide : `preproduction-oracle.md`).
+
 La checklist technique détaillée est dans `mise-en-production.md`, section 8.
 
 ## Échéances

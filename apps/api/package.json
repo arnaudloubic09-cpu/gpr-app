@@ -18,9 +18,10 @@
     "job": "ts-node --transpile-only src/cli/run-job.ts"
   },
   "prisma": {
-    "seed": "ts-node --transpile-only prisma/seed.ts"
+    "seed": "ts-node --transpile-only src/cli/seed.ts"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@gpr/connectors": "workspace:*",
     "@gpr/core": "workspace:*",
     "@nestjs/common": "^11.2.10",
@@ -40,7 +41,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@faker-js/faker": "^10.6.0",
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.2.10",

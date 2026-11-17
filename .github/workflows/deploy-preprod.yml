@@ -1,0 +1,99 @@
+# Déploiement de la préproduction en un clic : onglet « Actions » → « Déployer la préproduction » → Run workflow.
+# Secrets à créer dans Settings → Secrets and variables → Actions :
+#   PREPROD_SSH_HOST   adresse IP publique du serveur
+#   PREPROD_SSH_KEY    contenu complet de la clé privée SSH du serveur (fichier téléchargé chez Oracle)
+#   PREPROD_SMTP_USER  identifiant SMTP Brevo (xxxx@smtp-brevo.com)
+#   PREPROD_SMTP_PASS  clé SMTP Brevo
+name: Déployer la préproduction
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: "Email du compte super admin à créer (laisser vide s'il existe déjà)"
+        required: false
+        default: ''
+      seed_demo:
+        description: 'Charger les clubs et joueurs de démonstration (seulement si la base est vide)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-preprod
+  cancel-in-progress: false
+
+env:
+  BASE_DOMAIN: gpr-padel.fr
+  SSH_USER: ubuntu
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: preproduction
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Vérification des secrets
+        env:
+          HOST: ${{ secrets.PREPROD_SSH_HOST }}
+          KEY: ${{ secrets.PREPROD_SSH_KEY }}
+          SMTP_USER: ${{ secrets.PREPROD_SMTP_USER }}
+          SMTP_PASS: ${{ secrets.PREPROD_SMTP_PASS }}
+        run: |
+          missing=""
+          [ -n "$HOST" ] || missing="$missing PREPROD_SSH_HOST"
+          [ -n "$KEY" ] || missing="$missing PREPROD_SSH_KEY"
+          [ -n "$SMTP_USER" ] || missing="$missing PREPROD_SMTP_USER"
+          [ -n "$SMTP_PASS" ] || missing="$missing PREPROD_SMTP_PASS"
+          if [ -n "$missing" ]; then echo "::error::Secrets manquants :$missing"; exit 1; fi
+
+      - name: Vérification de l'email du super admin
+        env:
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+        run: |
+          if [ -n "$ADMIN_EMAIL" ] && ! printf '%s' "$ADMIN_EMAIL" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'; then
+            echo "::error::Email invalide : $ADMIN_EMAIL"; exit 1
+          fi
+
+      - name: Connexion SSH
+        env:
+          HOST: ${{ secrets.PREPROD_SSH_HOST }}
+          KEY: ${{ secrets.PREPROD_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host server\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_deploy\n  ServerAliveInterval 30\n' "$HOST" "$SSH_USER" > ~/.ssh/config
+          ssh server 'echo "Connecté à $(hostname)"'
+
+      - name: Envoi du code sur le serveur
+        run: |
+          ssh server 'sudo mkdir -p /opt/gpr/app /opt/gpr/state && sudo chown -R $USER /opt/gpr'
+          rsync -az --delete --exclude .git --exclude node_modules --exclude '**/dist' --exclude '**/.next' \
+            --exclude '**/.expo' --exclude 'apps/api/.env*' ./ server:/opt/gpr/app/
+
+      - name: Identifiants d'envoi d'emails (stockés sur le serveur uniquement)
+        env:
+          SMTP_USER: ${{ secrets.PREPROD_SMTP_USER }}
+          SMTP_PASS: ${{ secrets.PREPROD_SMTP_PASS }}
+        run: |
+          printf 'SMTP_USER=%s\nSMTP_PASS=%s\n' "$SMTP_USER" "$SMTP_PASS" \
+            | ssh server 'umask 077 && cat > /opt/gpr/state/smtp.env'
+
+      - name: Déploiement
+        env:
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          SEED_DEMO: ${{ inputs.seed_demo }}
+        run: |
+          ssh server "GPR_ENV=preproduction BASE_DOMAIN=$BASE_DOMAIN ACME_EMAIL=tech@$BASE_DOMAIN WEBAPP=true \
+            SEED_DEMO=$SEED_DEMO ADMIN_EMAIL='$ADMIN_EMAIL' bash /opt/gpr/app/deploy/remote-deploy.sh"
+
+      - name: Résumé
+        run: |
+          {
+            echo "### Préproduction déployée"
+            echo "- Back-office : https://admin.preprod.$BASE_DOMAIN"
+            echo "- App joueur (web) : https://app.preprod.$BASE_DOMAIN"
+            echo "- API : https://api.preprod.$BASE_DOMAIN/health"
+          } >> "$GITHUB_STEP_SUMMARY"

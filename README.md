@@ -113,6 +113,11 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
 
 Décisions prises et actions restantes avant la production : [docs/suivi-projet.md](docs/suivi-projet.md).
 
+## Préproduction
+
+Mise en ligne pas à pas (Oracle Cloud gratuit, domaine OVH, Brevo, déploiement en un clic depuis GitHub) :
+[docs/preproduction-oracle.md](docs/preproduction-oracle.md).
+
 ## Documentation des API de réservation
 
 Questions à poser à Playtomic et Doinsport : [docs/questions-fournisseurs-api.md](docs/questions-fournisseurs-api.md).

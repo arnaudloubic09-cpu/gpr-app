@@ -1,0 +1,20 @@
+# Version web de l'app joueur (tests en préproduction depuis le navigateur du téléphone).
+#   docker build -f apps/mobile/Dockerfile.web --build-arg EXPO_PUBLIC_API_URL=https://api.exemple.fr -t gpr-webapp .
+ARG NODE_IMAGE=node:22-bookworm-slim
+FROM ${NODE_IMAGE} AS build
+RUN corepack enable
+WORKDIR /repo
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+COPY packages/core/package.json packages/core/
+COPY apps/mobile/package.json apps/mobile/
+RUN pnpm install --frozen-lockfile --filter "@gpr/mobile..."
+COPY packages/core packages/core
+COPY apps/mobile apps/mobile
+ARG EXPO_PUBLIC_API_URL
+ENV EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL} EXPO_NO_TELEMETRY=1 CI=1
+RUN pnpm --filter @gpr/core build && cd apps/mobile && npx expo export --platform web --output-dir /out
+
+FROM caddy:2-alpine
+COPY --from=build /out /srv
+COPY apps/mobile/Caddyfile.web /etc/caddy/Caddyfile
+EXPOSE 80
