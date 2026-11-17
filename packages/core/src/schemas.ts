@@ -18,7 +18,11 @@ export type OtpVerify = z.infer<typeof otpVerifySchema>;
 
 export const refreshSchema = z.object({ refreshToken: z.string().min(20).max(200) });
 
-export const clubSettingsSchema = z.object({ offPeakBonusEnabled: z.boolean() }).strict();
+export const clubSettingsSchema = z
+  .object({ offPeakBonusEnabled: z.boolean(), counterAutoValidate: z.boolean() })
+  .partial()
+  .strict()
+  .refine((v) => Object.keys(v).length > 0, 'Aucun paramètre fourni');
 export type ClubSettings = z.infer<typeof clubSettingsSchema>;
 
 export interface AuthTokens {

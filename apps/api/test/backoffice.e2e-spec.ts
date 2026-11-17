@@ -120,6 +120,47 @@ describe('Back-office : admin club et super admin (intégration)', () => {
         .expect(200);
     });
 
+    it('accepte un code scanné par une douchette réglée en QWERTY sur un poste AZERTY', async () => {
+      const { code } = await couponFor(player);
+      const digits: Record<string, string> = {
+        '2': 'é',
+        '3': '"',
+        '4': "'",
+        '5': '(',
+        '6': '-',
+        '7': 'è',
+        '8': '_',
+        '9': 'ç',
+      };
+      const swap: Record<string, string> = { A: 'Q', Q: 'A', Z: 'W', W: 'Z', M: '?', '-': ')' };
+      const typed = [...code].map((c) => digits[c] ?? swap[c] ?? c).join('');
+      expect(typed).toContain(')');
+      const res = await http()
+        .post(`/clubs/${club.id}/coupons/${encodeURIComponent(typed)}/validate`)
+        .set(await as(admin))
+        .expect(200);
+      expect(res.body.coupon.code).toBe(code);
+    });
+
+    it('option « validation en un geste » enregistrée par club (admin uniquement)', async () => {
+      const h = await as(admin);
+      const res = await http()
+        .patch(`/clubs/${club.id}/settings`)
+        .set(h)
+        .send({ counterAutoValidate: true })
+        .expect(200);
+      expect(res.body.counterAutoValidate).toBe(true);
+      expect(
+        (await http().get(`/clubs/${club.id}`).set(h).expect(200)).body.counterAutoValidate,
+      ).toBe(true);
+      await http().patch(`/clubs/${club.id}/settings`).set(h).send({}).expect(400);
+      await http()
+        .patch(`/clubs/${club.id}/settings`)
+        .set(await as(otherAdmin))
+        .send({ counterAutoValidate: true })
+        .expect(403);
+    });
+
     it('refuse un coupon émis pour un autre club, en indiquant lequel', async () => {
       const { code } = await couponFor(player, otherClub);
       const res = await http()

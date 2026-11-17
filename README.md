@@ -70,6 +70,9 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
 - Tableau de bord : joueurs actifs, points GPR distribués / échangés, coupons, récompenses les plus échangées.
 - **Comptoir** : saisie (ou douchette USB) du code du coupon → vérification → validation unique.
   Un coupon d'un autre club est refusé avec le nom du club émetteur.
+  Douchette USB : elle se comporte comme un clavier (code tapé + Entrée). Il faut une douchette **2D** capable de lire
+  un écran de téléphone. Une douchette réglée en QWERTY sur un poste AZERTY est corrigée automatiquement.
+  Option par club « validation en un geste » (Paramètres) : le coupon est validé dès le scan.
 - Récompenses : création / modification (catégories autorisées, cours en réduction uniquement), stock, dates.
 - Joueurs : fiche (solde global, historique dans le club), ajustement motivé plafonné (200 points GPR par défaut).
 - Paramètres : activation du bonus heures creuses.

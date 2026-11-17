@@ -50,6 +50,7 @@ export class ClubsService {
         ...PUBLIC_FIELDS,
         timezone: true,
         isActive: true,
+        counterAutoValidate: true,
         connector:
           user.role === Role.SUPER_ADMIN
             ? {
@@ -73,13 +74,13 @@ export class ClubsService {
     return this.prisma.$transaction(async (tx) => {
       const before = await tx.club.findUnique({
         where: { id: clubId },
-        select: { offPeakBonusEnabled: true },
+        select: { offPeakBonusEnabled: true, counterAutoValidate: true },
       });
       if (!before) throw new NotFoundException('Club introuvable');
       const after = await tx.club.update({
         where: { id: clubId },
         data: settings,
-        select: PUBLIC_FIELDS,
+        select: { ...PUBLIC_FIELDS, counterAutoValidate: true },
       });
       await this.audit.log(
         {

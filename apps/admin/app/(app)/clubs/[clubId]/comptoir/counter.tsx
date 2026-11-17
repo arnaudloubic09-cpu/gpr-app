@@ -18,10 +18,12 @@ function value(r: CouponCheck['coupon']['reward']) {
 }
 
 /**
- * Écran comptoir : la personne à l'accueil tape le code (ou le scanne avec une douchette USB,
- * qui saisit le code puis « Entrée »), vérifie, puis valide. Un coupon ne sert qu'une fois.
+ * Écran comptoir. Une douchette USB se comporte comme un clavier : elle « tape » le code puis « Entrée ».
+ * (Une douchette réglée en QWERTY sur un poste AZERTY est corrigée automatiquement par l'API.)
+ *  - mode standard : vérifier → valider ;
+ *  - mode « un geste » (option du club) : validation immédiate, champ vidé pour le client suivant.
  */
-export function Counter({ clubId }: { clubId: string }) {
+export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState('');
   const [check, setCheck] = useState<CouponCheck | null>(null);
@@ -29,13 +31,27 @@ export function Counter({ clubId }: { clubId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  const focusInput = () => setTimeout(() => input.current?.focus(), 0);
+
   const reset = () => {
     setCode('');
     setCheck(null);
     setValidated(null);
     setError(null);
-    setTimeout(() => input.current?.focus(), 0);
+    focusInput();
   };
+
+  const onAutoValidate = () =>
+    start(async () => {
+      setCheck(null);
+      setValidated(null);
+      setError(null);
+      const res = await validateCoupon(clubId, code);
+      if (res.ok) setValidated(res.data);
+      else setError(res.error);
+      setCode('');
+      focusInput();
+    });
 
   const onLookup = () =>
     start(async () => {
@@ -62,7 +78,8 @@ export function Counter({ clubId }: { clubId: string }) {
         className="card"
         onSubmit={(e) => {
           e.preventDefault();
-          onLookup();
+          if (autoValidate) onAutoValidate();
+          else onLookup();
         }}
       >
         <label htmlFor="code">Code du coupon</label>
@@ -79,12 +96,18 @@ export function Counter({ clubId }: { clubId: string }) {
             spellCheck={false}
           />
           <button disabled={pending || !code.trim()}>
-            {pending && !check ? 'Recherche…' : 'Vérifier'}
+            {pending
+              ? autoValidate
+                ? 'Validation…'
+                : 'Recherche…'
+              : autoValidate
+                ? 'Valider'
+                : 'Vérifier'}
           </button>
         </div>
         <p className="hint">
-          Le code est affiché sous le QR code dans l’application du joueur. Une douchette USB
-          fonctionne aussi.
+          Le code est affiché sous le QR code dans l’application du joueur. Avec une douchette USB,
+          il suffit de scanner : le code s’inscrit tout seul.
         </p>
       </form>
 
@@ -92,9 +115,13 @@ export function Counter({ clubId }: { clubId: string }) {
         <div className="card counter-result KO" role="alert">
           <h2>Coupon refusé</h2>
           <p>{error}</p>
-          <button className="secondary" onClick={reset}>
-            Nouveau coupon
-          </button>
+          {autoValidate ? (
+            <p className="muted">Scannez le coupon suivant quand vous voulez.</p>
+          ) : (
+            <button className="secondary" onClick={reset}>
+              Nouveau coupon
+            </button>
+          )}
         </div>
       ) : null}
 
@@ -107,9 +134,13 @@ export function Counter({ clubId }: { clubId: string }) {
           <p>
             Remettez la récompense à {validated.player.firstName} {validated.player.lastInitial}.
           </p>
-          <button className="big-btn" onClick={reset}>
-            Coupon suivant
-          </button>
+          {autoValidate ? (
+            <p className="muted">Prêt pour le coupon suivant : scannez directement.</p>
+          ) : (
+            <button className="big-btn" onClick={reset}>
+              Coupon suivant
+            </button>
+          )}
         </div>
       ) : check ? (
         <div className={`card counter-result ${check.state === 'VALID' ? 'VALID' : 'KO'}`}>

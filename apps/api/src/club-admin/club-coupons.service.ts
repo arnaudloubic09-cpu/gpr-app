@@ -1,4 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { normalizeCouponCode } from '@gpr/core';
 import type { AuthUser } from '../auth/auth.types';
 import { AnalyticsService } from '../common/analytics/analytics.service';
 import { AuditService } from '../common/audit/audit.service';
@@ -6,14 +7,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { COUPON_INCLUDE, toCouponView } from '../rewards/rewards.service';
 
 export type CouponState = 'VALID' | 'USED' | 'EXPIRED' | 'CANCELLED';
-
-/** Accepte « gpr-7k4m-q2xd », « GPR7K4MQ2XD », « 7K4M Q2XD »… */
-export function normalizeCouponCode(raw: string): string | null {
-  let n = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (n.length === 8) n = `GPR${n}`;
-  if (!/^GPR[A-Z0-9]{8}$/.test(n)) return null;
-  return `GPR-${n.slice(3, 7)}-${n.slice(7)}`;
-}
 
 /** Validation des coupons à l'accueil du club : usage unique garanti par une mise à jour conditionnelle. */
 @Injectable()

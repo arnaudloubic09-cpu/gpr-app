@@ -3,7 +3,12 @@ import { PageHeader } from '@/components/ui';
 import { apiGet } from '@/lib/api';
 import { saveSettings } from './actions';
 
-type Club = { id: string; name: string; offPeakBonusEnabled: boolean };
+type Club = {
+  id: string;
+  name: string;
+  offPeakBonusEnabled: boolean;
+  counterAutoValidate: boolean;
+};
 
 export default async function SettingsPage({ params }: { params: Promise<{ clubId: string }> }) {
   const { clubId } = await params;
@@ -30,6 +35,21 @@ export default async function SettingsPage({ params }: { params: Promise<{ clubI
             defaultChecked={club.offPeakBonusEnabled}
           />{' '}
           Activer le bonus heures creuses dans mon club
+        </label>
+
+        <h2 style={{ marginTop: 28 }}>Comptoir</h2>
+        <p className="muted">
+          Avec la validation en un geste, un coupon valable est validé dès qu’il est scanné (ou
+          saisi), sans clic de confirmation : plus rapide en période d’affluence. La récompense à
+          remettre s’affiche ensuite à l’écran.
+        </p>
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            name="counterAutoValidate"
+            defaultChecked={club.counterAutoValidate}
+          />{' '}
+          Valider les coupons en un seul geste
         </label>
       </ActionForm>
     </>

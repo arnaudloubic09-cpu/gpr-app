@@ -178,6 +178,8 @@ model Club {
   timezone            String   @default("Europe/Paris")
   /// Le club choisit d'activer ou non le bonus heures creuses (plages et multiplicateur fixés par le GPR).
   offPeakBonusEnabled Boolean  @default(false)
+  /// Comptoir : validation immédiate du coupon dès le scan (sans clic de confirmation)
+  counterAutoValidate Boolean  @default(false)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

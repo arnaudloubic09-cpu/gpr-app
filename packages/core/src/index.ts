@@ -5,3 +5,4 @@ export * from './schemas';
 export * from './points';
 export * from './ledger';
 export * from './admin';
+export * from './coupon-code';
