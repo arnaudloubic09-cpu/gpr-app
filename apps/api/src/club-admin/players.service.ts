@@ -89,7 +89,7 @@ export class PlayersService {
 
   async detail(userId: string, clubId: string | null) {
     const user = await this.findInScope(userId, clubId);
-    const [balance, entries, coupons] = await Promise.all([
+    const [balance, entries, coupons, rules] = await Promise.all([
       this.ledger.balance(userId),
       this.prisma.ledgerEntry.findMany({
         where: { userId, ...(clubId ? { clubId } : {}) },
@@ -103,8 +103,11 @@ export class PlayersService {
         take: 50,
         include: COUPON_INCLUDE,
       }),
+      this.rules.getActive(),
     ]);
     return {
+      /** Plafond d'ajustement applicable dans cet espace (null = super admin, sans plafond). */
+      adjustmentLimit: clubId ? rules.clubAdjustmentMax : null,
       ...user,
       phone: clubId ? undefined : user.phone, // minimisation : téléphone visible du super admin seulement
       balance,

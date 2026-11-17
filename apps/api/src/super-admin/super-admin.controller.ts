@@ -207,9 +207,9 @@ export class SuperAdminController {
   // ── Journal d'audit ──
   @Get('audit')
   async auditLog(
-    @Query('clubId') clubId?: string,
+    @Query('clubId', new ParseUUIDPipe({ optional: true })) clubId?: string,
     @Query('entityType') entityType?: string,
-    @Query('cursor') cursor?: string,
+    @Query('cursor', new ParseUUIDPipe({ optional: true })) cursor?: string,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit = 50,
   ) {
     const take = Math.min(Math.max(limit, 1), 200);

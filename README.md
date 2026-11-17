@@ -63,6 +63,23 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
 - Aperçu dans un navigateur : `pnpm --filter @gpr/mobile web` (l'API doit autoriser l'origine dans `CORS_ORIGINS`).
 - Sur téléphone : application **Expo Go**, puis `EXPO_PUBLIC_API_URL=http://<IP-de-votre-ordinateur>:3000 pnpm dev:mobile`.
 
+## Back-office (phase 4) — http://localhost:3001
+
+**Admin club** (son club uniquement)
+
+- Tableau de bord : joueurs actifs, points GPR distribués / échangés, coupons, récompenses les plus échangées.
+- **Comptoir** : saisie (ou douchette USB) du code du coupon → vérification → validation unique.
+  Un coupon d'un autre club est refusé avec le nom du club émetteur.
+- Récompenses : création / modification (catégories autorisées, cours en réduction uniquement), stock, dates.
+- Joueurs : fiche (solde global, historique dans le club), ajustement motivé plafonné (200 points GPR par défaut).
+- Paramètres : activation du bonus heures creuses.
+
+**Super admin**
+
+- Vue d'ensemble et flux de points entre clubs ; clubs et connecteurs (identifiants chiffrés, jamais réaffichés),
+  historique et relance des synchronisations ; **alerte email après 3 échecs consécutifs** ;
+  règles GPR versionnées ; comptes admin (création, désactivation immédiate) ; journal d'audit ; tous les joueurs.
+
 ## Tests
 
 ```bash
