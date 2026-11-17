@@ -2,10 +2,14 @@
   "expo": {
     "name": "GPR",
     "slug": "gpr-padel",
+    "scheme": "gpr",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": { "bundleIdentifier": "fr.gpr.padel" },
-    "android": { "package": "fr.gpr.padel" }
+    "android": { "package": "fr.gpr.padel" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": false }
   }
 }

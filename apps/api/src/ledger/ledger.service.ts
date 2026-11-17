@@ -54,7 +54,7 @@ export class LedgerService {
   ): Promise<{ items: TransactionView[]; nextCursor: string | null }> {
     const rows = await this.prisma.ledgerEntry.findMany({
       where: { userId },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      orderBy: [{ earnedAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       include: { club: { select: { id: true, name: true } } },

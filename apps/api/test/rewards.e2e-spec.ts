@@ -6,6 +6,7 @@ import request from 'supertest';
 import { addMonths } from '@gpr/core';
 import { LedgerService } from '../src/ledger/ledger.service';
 import { CouponsService } from '../src/rewards/coupons.service';
+import { TokenService } from '../src/auth/token.service';
 import { CapturingMailService, createClub, createTestApp, createUser, login } from './helpers';
 
 describe('Catalogue, échange de points et coupons (intégration)', () => {
@@ -286,8 +287,10 @@ describe('Catalogue, échange de points et coupons (intégration)', () => {
         update: {},
         create: { email, role: 'PLAYER' },
       });
+      // Email fixe (requis par le connecteur simulé) : jetons émis directement, sans OTP,
+      // pour ne pas atteindre la limite de demandes de code quand on relance les tests.
       const tok = {
-        Authorization: `Bearer ${(await login(app, mail, p.email, 'MOBILE')).accessToken}`,
+        Authorization: `Bearer ${(await moduleRef.get(TokenService).issue(p)).accessToken}`,
       };
 
       const first = await http().post('/me/link-account').set(tok).expect(200);

@@ -53,6 +53,16 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
   `POST /clubs/:id/sync` (super admin) ; historique `GET /clubs/:id/sync-runs`.
 - **Joueur** : `GET /me/balance`, `GET /me/transactions`.
 
+## App joueur (phase 3)
+
+- Connexion par code email, profil (prénom, nom, club principal), liaison du compte de réservation.
+- Accueil : points GPR disponibles, en attente, expirant bientôt ; historique complet.
+- Catalogue par club (club principal en premier) ; échange de points → **coupon QR à usage unique**,
+  valable 7 jours (durée fixée par le GPR). Non utilisé : points remboursés automatiquement.
+  Le joueur peut aussi l'annuler lui-même. La validation au comptoir arrive en phase 4.
+- Aperçu dans un navigateur : `pnpm --filter @gpr/mobile web` (l'API doit autoriser l'origine dans `CORS_ORIGINS`).
+- Sur téléphone : application **Expo Go**, puis `EXPO_PUBLIC_API_URL=http://<IP-de-votre-ordinateur>:3000 pnpm dev:mobile`.
+
 ## Tests
 
 ```bash

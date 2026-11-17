@@ -107,5 +107,7 @@ export interface TransactionItem {
   status: 'PENDING' | 'VALIDATED';
   club: { id: string; name: string } | null;
   reason: string | null;
+  /** Date de l'événement : fin de la partie pour un gain, date de l'opération sinon. */
+  earnedAt: string;
   createdAt: string;
 }
