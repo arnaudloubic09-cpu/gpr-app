@@ -8,6 +8,7 @@ import {
   saveTokens,
   setSessionExpiredHandler,
 } from './api';
+import { unregisterPush } from './push';
 import { storage } from './storage';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    await unregisterPush();
     const refreshToken = await storage.get('gpr.refresh');
     if (refreshToken) {
       await publicPost('/auth/logout', { refreshToken }).catch(() => undefined);

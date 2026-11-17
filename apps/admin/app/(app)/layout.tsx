@@ -12,6 +12,8 @@ const clubItems = (id: string) => [
   { href: `/clubs/${id}/comptoir`, label: 'Comptoir : valider un coupon' },
   { href: `/clubs/${id}/recompenses`, label: 'Récompenses' },
   { href: `/clubs/${id}/joueurs`, label: 'Joueurs' },
+  { href: `/clubs/${id}/defis`, label: 'Défis' },
+  { href: `/clubs/${id}/avantages`, label: 'Avantages par niveau' },
   { href: `/clubs/${id}/parametres`, label: 'Paramètres' },
 ];
 
@@ -33,6 +35,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           { href: '/admin', label: 'Vue d’ensemble' },
           { href: '/admin/clubs', label: 'Clubs et connecteurs' },
           { href: '/admin/joueurs', label: 'Joueurs' },
+          { href: '/admin/defis', label: 'Défis du groupement' },
+          { href: '/admin/badges', label: 'Badges' },
           { href: '/admin/regles', label: 'Règles GPR' },
           { href: '/admin/comptes', label: 'Comptes admin' },
           { href: '/admin/audit', label: 'Journal d’audit' },

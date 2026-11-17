@@ -24,6 +24,10 @@ export default function TabsLayout() {
         options={{ title: 'Récompenses', tabBarIcon: icon('gift-outline') }}
       />
       <Tabs.Screen
+        name="challenges"
+        options={{ title: 'Défis', tabBarIcon: icon('flag-outline') }}
+      />
+      <Tabs.Screen
         name="coupons"
         options={{ title: 'Coupons', tabBarIcon: icon('qr-code-outline') }}
       />

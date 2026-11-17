@@ -12,6 +12,7 @@ import type { AuthUser } from '../auth/auth.types';
 import { ClubScoped, CurrentUser, Roles } from '../auth/decorators';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { PrismaService } from '../prisma/prisma.service';
+import { RulesService } from '../rules/rules.service';
 import { ChallengesService } from './challenges.service';
 import { PerksService } from './perks.service';
 
@@ -102,7 +103,16 @@ export class NetworkGamificationController {
 @Controller()
 @Roles(Role.CLUB_ADMIN, Role.SUPER_ADMIN)
 export class GamificationReferenceController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rules: RulesService,
+  ) {}
+
+  /** Niveaux en vigueur (pour les formulaires d'avantages). */
+  @Get('levels')
+  async levels() {
+    return (await this.rules.getActive()).levels;
+  }
 
   @Get('badges')
   badges() {

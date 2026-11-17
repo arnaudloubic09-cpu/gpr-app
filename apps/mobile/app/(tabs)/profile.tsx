@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Button, Card, Chip, ErrorText, Screen, styles, Title } from '../../src/components/ui';
@@ -26,6 +27,7 @@ const LINK_STATUS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { me, reloadMe, signOut } = useAuth();
+  const router = useRouter();
   const clubs = useApi<Club[]>('/clubs');
   const links = useApi<Link[]>('/me/links');
   const [linkResults, setLinkResults] = useState<LinkResult[] | null>(null);
@@ -59,6 +61,22 @@ export default function ProfileScreen() {
       <Title subtitle={me?.email}>
         {me?.firstName} {me?.lastName}
       </Title>
+
+      {me?.deletionScheduledFor ? (
+        <Card style={{ borderColor: '#b91c1c' }}>
+          <Text style={{ color: '#b91c1c', fontWeight: '700' }}>
+            Suppression du compte prévue le {formatDate(String(me.deletionScheduledFor))}
+          </Text>
+          <Button label="Gérer" variant="secondary" onPress={() => router.push('/privacy')} />
+        </Card>
+      ) : null}
+
+      <Button
+        label="Ma carte de membre"
+        icon="card-outline"
+        onPress={() => router.push('/member-card')}
+      />
+      <View style={{ height: space(3) }} />
 
       <Card>
         <Text style={styles.h2}>Club principal</Text>
@@ -103,6 +121,12 @@ export default function ProfileScreen() {
       </Card>
 
       <ErrorText>{error}</ErrorText>
+      <Button
+        label="Confidentialité et données"
+        variant="secondary"
+        icon="shield-checkmark-outline"
+        onPress={() => router.push('/privacy')}
+      />
       <Button label="Se déconnecter" variant="secondary" onPress={signOut} icon="log-out-outline" />
     </Screen>
   );

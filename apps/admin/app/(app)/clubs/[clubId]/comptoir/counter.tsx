@@ -1,7 +1,8 @@
 'use client';
 
+import { parseCounterCode } from '@gpr/core';
 import { useRef, useState, useTransition } from 'react';
-import { CouponCheck, lookupCoupon, validateCoupon } from './actions';
+import { CouponCheck, lookupCoupon, lookupMember, MemberCheck, validateCoupon } from './actions';
 
 const STATE_TEXT: Record<CouponCheck['state'], string> = {
   VALID: 'Coupon valable',
@@ -28,12 +29,14 @@ export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate
   const [code, setCode] = useState('');
   const [check, setCheck] = useState<CouponCheck | null>(null);
   const [validated, setValidated] = useState<CouponCheck | null>(null);
+  const [member, setMember] = useState<MemberCheck | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const focusInput = () => setTimeout(() => input.current?.focus(), 0);
 
   const reset = () => {
+    setMember(null);
     setCode('');
     setCheck(null);
     setValidated(null);
@@ -41,9 +44,25 @@ export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate
     focusInput();
   };
 
+  const onMember = () =>
+    start(async () => {
+      setCheck(null);
+      setValidated(null);
+      setError(null);
+      const res = await lookupMember(clubId, code);
+      if (res.ok) setMember(res.data);
+      else {
+        setMember(null);
+        setError(res.error);
+      }
+      setCode('');
+      focusInput();
+    });
+
   const onAutoValidate = () =>
     start(async () => {
       setCheck(null);
+      setMember(null);
       setValidated(null);
       setError(null);
       const res = await validateCoupon(clubId, code);
@@ -56,6 +75,7 @@ export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate
   const onLookup = () =>
     start(async () => {
       setValidated(null);
+      setMember(null);
       setError(null);
       const res = await lookupCoupon(clubId, code);
       if (res.ok) setCheck(res.data);
@@ -78,7 +98,9 @@ export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate
         className="card"
         onSubmit={(e) => {
           e.preventDefault();
-          if (autoValidate) onAutoValidate();
+          // Carte de membre (GPRM-…) : affichage des avantages, rien à valider.
+          if (parseCounterCode(code)?.kind === 'member') onMember();
+          else if (autoValidate) onAutoValidate();
           else onLookup();
         }}
       >
@@ -106,8 +128,8 @@ export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate
           </button>
         </div>
         <p className="hint">
-          Le code est affiché sous le QR code dans l’application du joueur. Avec une douchette USB,
-          il suffit de scanner : le code s’inscrit tout seul.
+          Coupon (GPR-…) ou carte de membre (GPRM-…) : le code est affiché sous le QR code dans
+          l’application du joueur. Avec une douchette USB, il suffit de scanner.
         </p>
       </form>
 
@@ -122,6 +144,30 @@ export function Counter({ clubId, autoValidate }: { clubId: string; autoValidate
               Nouveau coupon
             </button>
           )}
+        </div>
+      ) : null}
+
+      {member ? (
+        <div className="card counter-result VALID" role="status">
+          <div className="muted">Carte de membre</div>
+          <h2>
+            {member.player.firstName} {member.player.lastInitial}. · Niveau {member.level.label}
+          </h2>
+          {member.perks.length ? (
+            <>
+              <p>Avantages dans votre club, à appliquer en caisse :</p>
+              {member.perks.map((p) => (
+                <p key={p.id}>
+                  <strong>{p.label}</strong>
+                </p>
+              ))}
+            </>
+          ) : (
+            <p className="muted">Pas d’avantage à ce niveau dans votre club.</p>
+          )}
+          <button className="secondary" onClick={reset}>
+            Terminé
+          </button>
         </div>
       ) : null}
 

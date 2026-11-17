@@ -31,3 +31,16 @@ export async function validateCoupon(
     'POST',
   );
 }
+
+export type MemberCheck = {
+  player: { firstName: string | null; lastInitial: string | null };
+  level: { code: string; label: string };
+  perks: { id: string; label: string; discountPercent: number }[];
+};
+
+export async function lookupMember(
+  clubId: string,
+  code: string,
+): Promise<ActionResult<MemberCheck>> {
+  return apiRead<MemberCheck>(`/clubs/${clubId}/members/${encodeURIComponent(code.trim())}`);
+}

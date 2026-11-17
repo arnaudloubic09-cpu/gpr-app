@@ -64,7 +64,8 @@ export class LedgerService {
       items: page.map((e) => ({
         id: e.id,
         type: e.type,
-        label: TYPE_LABELS[e.type],
+        label:
+          e.type === 'CHALLENGE' && e.reason ? `Défi réussi : ${e.reason}` : TYPE_LABELS[e.type],
         amount: e.amount,
         status: e.availableAt > now ? 'PENDING' : 'VALIDATED',
         club: e.club,

@@ -1,9 +1,11 @@
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/lib/auth';
+import { screenFor } from '../src/lib/push';
 import { colors } from '../src/lib/theme';
 
 /** Redirige selon l'état de la session : connexion, profil à compléter, ou application. */
@@ -26,6 +28,15 @@ function Gate() {
       router.replace('/');
   }, [status, me, segments, router]);
 
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      router.push(
+        screenFor(response.notification.request.content.data as Record<string, unknown>) as never,
+      );
+    });
+    return () => sub.remove();
+  }, [router]);
+
   if (status === 'loading') return <Loading />;
   return (
     <Stack
@@ -42,6 +53,9 @@ function Gate() {
       <Stack.Screen name="history" options={{ title: 'Historique' }} />
       <Stack.Screen name="reward/[id]" options={{ title: 'Récompense' }} />
       <Stack.Screen name="coupon/[id]" options={{ title: 'Mon coupon' }} />
+      <Stack.Screen name="member-card" options={{ title: 'Ma carte de membre' }} />
+      <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
+      <Stack.Screen name="privacy" options={{ title: 'Confidentialité et données' }} />
     </Stack>
   );
 }

@@ -14,7 +14,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
     "prisma:reset": "prisma migrate reset --force",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "job": "ts-node --transpile-only scripts/run-job.ts"
   },
   "prisma": {
     "seed": "ts-node --transpile-only prisma/seed.ts"

@@ -8,5 +8,5 @@
     "declaration": false,
     "types": ["node", "jest"]
   },
-  "include": ["src", "test", "prisma/seed.ts"]
+  "include": ["src", "test", "prisma/seed.ts", "scripts"]
 }

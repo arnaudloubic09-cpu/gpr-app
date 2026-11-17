@@ -83,6 +83,20 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
   historique et relance des synchronisations ; **alerte email après 3 échecs consécutifs** ;
   règles GPR versionnées ; comptes admin (création, désactivation immédiate) ; journal d'audit ; tous les joueurs.
 
+## Gamification, notifications, RGPD (phase 5)
+
+- **Défis** (moteur générique) : nombre de parties, créneau précis, temps de jeu, semaines consécutives,
+  clubs différents ; par semaine, mois ou dates fixes ; défis de club ou du groupement ; récompense en points GPR
+  (plafonnée pour un club) et/ou badge. Évalués quand les points de la partie sont validés (H+2).
+- **Niveaux** Bronze / Argent / Or / Platine sur les points GPR gagnés en 12 mois glissants.
+- **Avantages par niveau**, définis par chaque club (ex. Or : -10 % shop, -10 % tournois ; jamais sur une partie),
+  présentés avec la **carte de membre** (QR `GPRM-…`) lue au comptoir.
+- **Notifications** : points validés, défi réussi, badge, niveau, coupon qui expire demain, nouvelle récompense
+  du club principal. Centre de notifications dans l'app ; push uniquement avec consentement
+  (`PUSH_PROVIDER=expo` en production, compte Expo/EAS requis).
+- **RGPD** : consentements historisés, export par email, suppression avec 30 jours de rétractation puis anonymisation.
+- Lancer une tâche à la demande : `pnpm --filter @gpr/api job gamification|expire|coupons-expire|gdpr-deletions`.
+
 ## Tests
 
 ```bash

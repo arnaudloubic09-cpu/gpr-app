@@ -38,3 +38,25 @@ export const COUPON_STATUS: Record<CouponView['status'], string> = {
   EXPIRED: 'Expiré — points remboursés',
   CANCELLED: 'Annulé — points remboursés',
 };
+
+export const LEVEL_COLORS: Record<string, string> = {
+  BRONZE: '#b45309',
+  SILVER: '#64748b',
+  GOLD: '#ca8a04',
+  PLATINUM: '#0e7490',
+};
+
+export const BADGE_ICONS: Record<string, string> = {
+  trophy: 'trophy',
+  medal: 'medal',
+  star: 'star',
+  flame: 'flame',
+  compass: 'compass',
+  calendar: 'calendar',
+  sunny: 'sunny',
+  moon: 'moon',
+  flash: 'flash',
+  ribbon: 'ribbon',
+  tennisball: 'tennisball',
+  people: 'people',
+};
