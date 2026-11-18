@@ -31,8 +31,16 @@ log() { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
 # 1. Docker (premier déploiement uniquement)
 if ! command -v docker >/dev/null 2>&1; then
   log "Installation de Docker"
-  curl -fsSL https://get.docker.com | sudo sh
+  # Script officiel Docker ; si la version d'Ubuntu n'est pas encore prise en charge (ex. toute nouvelle
+  # version), repli sur les paquets Docker fournis par Ubuntu.
+  if ! curl -fsSL https://get.docker.com | sudo sh; then
+    log "Repli : paquets Docker d'Ubuntu"
+    sudo apt-get update -y
+    sudo apt-get install -y docker.io docker-compose-v2 || sudo apt-get install -y docker.io docker-compose-plugin
+    sudo systemctl enable --now docker
+  fi
 fi
+sudo docker compose version >/dev/null 2>&1 || { echo "Docker Compose introuvable après installation"; exit 1; }
 DOCKER="sudo docker"
 
 # 2. Pare-feu du système : ouvre 80/443 si des règles les bloquent (ex. images Ubuntu d'Oracle Cloud ; sans effet chez OVH)
