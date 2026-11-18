@@ -35,7 +35,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 DOCKER="sudo docker"
 
-# 2. Pare-feu du système : les images Ubuntu d'Oracle Cloud bloquent 80/443 par défaut
+# 2. Pare-feu du système : ouvre 80/443 si des règles les bloquent (ex. images Ubuntu d'Oracle Cloud ; sans effet chez OVH)
 if command -v iptables >/dev/null 2>&1; then
   for port in 80 443; do
     sudo iptables -C INPUT -p tcp --dport "$port" -j ACCEPT 2>/dev/null \
@@ -150,6 +150,10 @@ for i in $(seq 1 30); do
   [ "$i" = 30 ] && echo "⚠ L'API ne répond pas encore en HTTPS (DNS ou certificat en cours ?). Vérifier : https://${API_DOMAIN}/health"
   sleep 5
 done
+
+# Nettoyage des anciennes images et du cache de construction (le disque ne se remplit pas avec le temps)
+$DOCKER image prune -f >/dev/null 2>&1 || true
+$DOCKER builder prune -f --filter until=168h >/dev/null 2>&1 || true
 
 "${COMPOSE[@]}" ps
 cat <<EOF

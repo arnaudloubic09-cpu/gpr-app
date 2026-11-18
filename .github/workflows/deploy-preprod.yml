@@ -1,7 +1,7 @@
 # Déploiement de la préproduction en un clic : onglet « Actions » → « Déployer la préproduction » → Run workflow.
 # Secrets à créer dans Settings → Secrets and variables → Actions :
 #   PREPROD_SSH_HOST   adresse IP publique du serveur
-#   PREPROD_SSH_KEY    contenu complet de la clé privée SSH du serveur (fichier téléchargé chez Oracle)
+#   PREPROD_SSH_KEY    contenu complet de la clé privée SSH (fichier gpr_preprod créé sur votre ordinateur)
 #   PREPROD_SMTP_USER  identifiant SMTP Brevo (xxxx@smtp-brevo.com)
 #   PREPROD_SMTP_PASS  clé SMTP Brevo
 name: Déployer la préproduction
