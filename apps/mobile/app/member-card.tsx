@@ -55,7 +55,7 @@ export default function MemberCardScreen() {
         {card.data.vip?.active ? (
           <Text
             style={{
-              color: '#fbbf24',
+              color: colors.accent,
               fontWeight: '900',
               letterSpacing: 2,
               marginBottom: space(3),

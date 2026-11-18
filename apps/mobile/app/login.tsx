@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { Button, Card, ErrorText, Input, Screen, styles } from '../src/components/ui';
 import { ApiError } from '../src/lib/api';
 import { useAuth } from '../src/lib/auth';
@@ -29,7 +29,12 @@ export default function LoginScreen() {
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={{ alignItems: 'center', marginVertical: space(10) }}>
-          <Text style={{ fontSize: 44, fontWeight: '900', color: colors.primary }}>GPR</Text>
+          <Image
+            source={require('../assets/logo-dark.png')}
+            style={{ width: 220, height: 120 }}
+            resizeMode="contain"
+            accessibilityLabel="GPR – Groupement Padel Référence"
+          />
           <Text style={[styles.muted, { textAlign: 'center', marginTop: space(2) }]}>
             Jouez dans les clubs du groupement, cumulez des points GPR et profitez de récompenses.
           </Text>

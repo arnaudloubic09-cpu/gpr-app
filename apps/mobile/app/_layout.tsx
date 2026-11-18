@@ -1,3 +1,8 @@
+import {
+  PlayfairDisplay_600SemiBold,
+  PlayfairDisplay_700Bold,
+  useFonts,
+} from '@expo-google-fonts/playfair-display';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -62,6 +67,9 @@ function Gate() {
 }
 
 export default function RootLayout() {
+  // Police des titres (proche du logo GPR), chargée avant le premier affichage
+  const [fontsLoaded] = useFonts({ PlayfairDisplay_600SemiBold, PlayfairDisplay_700Bold });
+  if (!fontsLoaded) return <Loading />;
   return (
     <SafeAreaProvider>
       <AuthProvider>

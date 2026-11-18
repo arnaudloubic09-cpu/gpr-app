@@ -54,7 +54,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          GPR <span>back-office</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-light.png" alt="GPR – Groupement Padel Référence" />
+          <span>Back-office</span>
         </div>
         <Sidebar groups={groups} />
         <div className="sidebar-footer">

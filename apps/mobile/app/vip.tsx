@@ -88,13 +88,15 @@ export default function VipScreen() {
     <Screen>
       <View
         style={{
-          backgroundColor: '#111827',
+          backgroundColor: colors.primary,
           borderRadius: radius.lg,
           padding: space(5),
           marginBottom: space(4),
         }}
       >
-        <Text style={{ color: '#fbbf24', fontWeight: '800', letterSpacing: 2 }}>CARTE VIP GPR</Text>
+        <Text style={{ color: colors.accent, fontWeight: '800', letterSpacing: 2 }}>
+          CARTE VIP GPR
+        </Text>
         {isVip ? (
           <>
             <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900', marginTop: space(2) }}>

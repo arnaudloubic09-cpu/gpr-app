@@ -12,7 +12,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, radius, space } from '../lib/theme';
+import { colors, fonts, radius, space } from '../lib/theme';
 
 export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   return (
@@ -144,7 +144,10 @@ export function Chip({
 }
 
 const variantStyles = {
-  primary: StyleSheet.create({ box: { backgroundColor: colors.primary }, text: { color: '#fff' } }),
+  primary: StyleSheet.create({
+    box: { backgroundColor: colors.accent },
+    text: { color: colors.primary },
+  }),
   secondary: StyleSheet.create({
     box: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
     text: { color: colors.text },
@@ -158,8 +161,8 @@ const variantStyles = {
 export const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: space(4), paddingBottom: space(10) },
-  title: { fontSize: 26, fontWeight: '800', color: colors.text },
-  h2: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: space(2) },
+  title: { fontSize: 28, fontFamily: fonts.display, color: colors.text },
+  h2: { fontSize: 19, fontFamily: fonts.displaySemi, color: colors.text, marginBottom: space(2) },
   muted: { color: colors.muted, fontSize: 14 },
   card: {
     backgroundColor: colors.card,
