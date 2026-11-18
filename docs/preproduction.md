@@ -91,10 +91,11 @@ Pour mettre à jour la préproduction plus tard : relancer simplement le même w
 
 ## En cas de problème
 
-| Symptôme                                | Cause probable                                                                                 |
-| --------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Le workflow échoue à « Connexion SSH »  | IP ou clé privée incorrecte dans les secrets ; instance arrêtée                                |
-| « L'API ne répond pas encore en HTTPS » | DNS pas encore propagé ou ports 80/443 fermés (étape 1.8) ; relancer le workflow plus tard     |
-| Les codes de connexion n'arrivent pas   | Domaine Brevo non authentifié, identifiants SMTP erronés ; regarder les courriers indésirables |
+| Symptôme                                                         | Cause probable                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| « Your password has expired » / changement de mot de passe exigé | Première connexion à un VPS OVH : se connecter une fois depuis PowerShell avec `ssh -i $HOME\.ssh\gpr_preprod ubuntu@ADRESSE_IP`, saisir le mot de passe reçu d'OVH puis en choisir un nouveau (deux fois) ; relancer le déploiement |
+| Le workflow échoue à « Connexion SSH »                           | IP ou clé privée incorrecte dans les secrets ; instance arrêtée                                                                                                                                                                      |
+| « L'API ne répond pas encore en HTTPS »                          | DNS pas encore propagé ou ports 80/443 fermés (étape 1.8) ; relancer le workflow plus tard                                                                                                                                           |
+| Les codes de connexion n'arrivent pas                            | Domaine Brevo non authentifié, identifiants SMTP erronés ; regarder les courriers indésirables                                                                                                                                       |
 
 Prévenez Claude avec le message d'erreur affiché dans GitHub (jamais les secrets) pour un diagnostic.

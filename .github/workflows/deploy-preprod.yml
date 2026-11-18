@@ -65,7 +65,18 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/id_deploy && chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
           printf 'Host server\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_deploy\n  ServerAliveInterval 30\n' "$HOST" "$SSH_USER" > ~/.ssh/config
-          ssh server 'echo "Connecté à $(hostname)"'
+          if ! out=$(ssh server 'echo "Connecté à $(hostname)"' 2>&1); then
+            echo "$out"
+            if echo "$out" | grep -qi "password has expired\|change your password"; then
+              echo "::error::Le serveur impose un changement de mot de passe à la première connexion. Connectez-vous une fois depuis votre ordinateur pour le changer (voir docs/preproduction.md, « En cas de problème »), puis relancez ce déploiement."
+            elif echo "$out" | grep -qi "permission denied"; then
+              echo "::error::Clé refusée par le serveur : vérifiez le secret PREPROD_SSH_KEY et que la clé publique a bien été installée lors de la réinstallation du VPS."
+            else
+              echo "::error::Connexion impossible : vérifiez le secret PREPROD_SSH_HOST (adresse IPv4 du VPS)."
+            fi
+            exit 1
+          fi
+          echo "$out"
 
       - name: Envoi du code sur le serveur
         run: |

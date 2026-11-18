@@ -28,6 +28,12 @@ APP_DOMAIN="app.${PREFIX}${BASE_DOMAIN}"
 
 log() { printf '\n\033[1;36m▶ %s\033[0m\n' "$*"; }
 
+# Les commandes d'administration doivent pouvoir s'exécuter sans mot de passe (cas des VPS OVH / Oracle)
+if ! sudo -n true 2>/dev/null; then
+  echo "L'utilisateur $USER ne peut pas utiliser sudo sans mot de passe : impossible d'installer et de démarrer l'application."
+  exit 1
+fi
+
 # 1. Docker (premier déploiement uniquement)
 if ! command -v docker >/dev/null 2>&1; then
   log "Installation de Docker"
