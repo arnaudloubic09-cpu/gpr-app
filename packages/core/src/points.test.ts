@@ -109,3 +109,50 @@ describe('computeBookingPoints — heures creuses (×2, lun–ven, avant 12 h et
     expect(isOffPeak(new Date(`${WED}T17:00:00+01:00`), PARIS, rules.offPeakWindows)).toBe(false);
   });
 });
+
+import { computeIntervalsPoints, creditableIntervals, mergeIntervals } from './points';
+describe('anti-abus : temps de jeu crédité (1 h 30 par jour, chevauchements comptés une fois)', () => {
+  const t = (hhmm: string) => new Date(`2026-11-18T${hhmm}:00+01:00`);
+  const iv = (a: string, b: string) => ({ start: t(a), end: t(b) });
+  const mins = (l: { start: Date; end: Date }[]) =>
+    l.reduce((s, i) => s + (i.end.getTime() - i.start.getTime()) / 60_000, 0);
+
+  it('première partie de la journée : entièrement créditée jusqu’à 90 min', () => {
+    expect(mins(creditableIntervals(iv('18:00', '19:30'), [], 90))).toBe(90);
+    expect(mins(creditableIntervals(iv('18:00', '20:00'), [], 90))).toBe(90);
+  });
+
+  it('deuxième partie le même jour : seulement le temps restant sous le plafond', () => {
+    expect(mins(creditableIntervals(iv('18:00', '19:00'), [iv('10:00', '11:00')], 90))).toBe(30);
+    expect(mins(creditableIntervals(iv('18:00', '19:30'), [iv('10:00', '11:30')], 90))).toBe(0);
+  });
+
+  it('inscription sur deux parties en même temps : le chevauchement ne compte qu’une fois', () => {
+    expect(mins(creditableIntervals(iv('18:00', '19:30'), [iv('18:00', '19:30')], null))).toBe(0);
+    expect(mins(creditableIntervals(iv('18:30', '20:00'), [iv('18:00', '19:00')], null))).toBe(60);
+  });
+
+  it('sans plafond configuré : tout le temps non chevauchant est crédité', () => {
+    expect(mins(creditableIntervals(iv('18:00', '21:00'), [iv('10:00', '12:00')], null))).toBe(180);
+  });
+
+  it('fusion des intervalles', () => {
+    expect(
+      mergeIntervals([iv('10:00', '11:00'), iv('10:30', '12:00'), iv('14:00', '15:00')]).map((i) =>
+        mins([i]),
+      ),
+    ).toEqual([120, 60]);
+  });
+
+  it('points sur la portion créditée (bonus heures creuses conservé)', () => {
+    const r = computeIntervalsPoints(
+      [iv('11:00', '12:30')],
+      { timezone: PARIS, offPeakBonusEnabled: true },
+      rules,
+    );
+    expect(r.totalPoints).toBe(50);
+    expect(
+      computeIntervalsPoints([], { timezone: PARIS, offPeakBonusEnabled: true }, rules).totalPoints,
+    ).toBe(0);
+  });
+});

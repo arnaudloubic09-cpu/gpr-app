@@ -17,6 +17,7 @@ import {
   adjustmentSchema,
   RewardInput,
   rewardInputSchema,
+  STANDARD_CATALOG,
   STATS_PERIODS,
   StatsPeriod,
 } from '@gpr/core';
@@ -98,6 +99,30 @@ export class ClubAdminController {
     });
     await this.gamification.onRewardCreated(reward);
     return reward;
+  }
+
+  /** Importe le catalogue type GPR (seulement les récompenses absentes, par intitulé). */
+  @Post('admin/rewards/standard')
+  async importStandard(
+    @Param('clubId', ParseUUIDPipe) clubId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    const existing = await this.prisma.reward.findMany({
+      where: { clubId },
+      select: { title: true },
+    });
+    const missing = STANDARD_CATALOG.filter((r) => !existing.some((e) => e.title === r.title));
+    if (missing.length)
+      await this.prisma.reward.createMany({ data: missing.map((r) => ({ ...r, clubId })) });
+    await this.audit.log({
+      actor: { id: user.id, role: user.role },
+      action: 'reward.standard.import',
+      entityType: 'Club',
+      entityId: clubId,
+      clubId,
+      after: { added: missing.map((r) => r.title) },
+    });
+    return { added: missing.length };
   }
 
   @Patch('admin/rewards/:rewardId')

@@ -10,6 +10,7 @@ type Rules = {
   slotMinutes: number;
   pendingDelayMinutes: number;
   expirationMonths: number;
+  dailyMaxMinutes: number | null;
   couponValidityDays: number;
   clubAdjustmentMax: number;
   offPeakMultiplier: number | string;
@@ -82,6 +83,23 @@ export default async function RulesPage() {
               defaultValue={active.expirationMonths}
               required
             />
+          </div>
+          <div>
+            <label htmlFor="dailyMaxMinutes">Temps de jeu crédité max. par jour (minutes)</label>
+            <input
+              id="dailyMaxMinutes"
+              name="dailyMaxMinutes"
+              type="number"
+              min={30}
+              max={1440}
+              step={15}
+              defaultValue={active.dailyMaxMinutes ?? ''}
+              placeholder="Illimité"
+            />
+            <div className="hint">
+              Anti-abus, par joueur et tous clubs confondus. Les parties simultanées ne comptent
+              qu’une fois.
+            </div>
           </div>
         </div>
         <h2 style={{ marginTop: 24 }}>Heures creuses (lundi au vendredi)</h2>

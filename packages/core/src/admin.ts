@@ -48,6 +48,13 @@ export const ruleSetInputSchema = z
     slotMinutes: z.number().int().min(5).max(240),
     /** Plafond journalier : non implémenté à ce jour, doit rester null. */
     dailyCapPerPlayer: z.null(),
+    /** Anti-abus : temps de jeu crédité par jour et par joueur (minutes), null = illimité. */
+    dailyMaxMinutes: z
+      .number()
+      .int()
+      .min(30)
+      .max(24 * 60)
+      .nullable(),
     pendingDelayMinutes: z
       .number()
       .int()

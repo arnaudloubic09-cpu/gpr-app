@@ -26,6 +26,7 @@ export class RulesService {
       pointsPerSlot: rs.pointsPerSlot,
       slotMinutes: rs.slotMinutes,
       dailyCapPerPlayer: rs.dailyCapPerPlayer,
+      dailyMaxMinutes: rs.dailyMaxMinutes,
       pendingDelayMinutes: rs.pendingDelayMinutes,
       expirationMonths: rs.expirationMonths,
       couponValidityDays: rs.couponValidityDays,

@@ -18,6 +18,9 @@ export async function saveRules(levels: unknown, _prev: ActionResult | null, for
     pointsPerSlot: num('pointsPerSlot'),
     slotMinutes: num('slotMinutes'),
     dailyCapPerPlayer: null,
+    dailyMaxMinutes: String(form.get('dailyMaxMinutes') ?? '').trim()
+      ? num('dailyMaxMinutes')
+      : null,
     pendingDelayMinutes: num('pendingDelayHours') * 60,
     expirationMonths: num('expirationMonths'),
     couponValidityDays: num('couponValidityDays'),

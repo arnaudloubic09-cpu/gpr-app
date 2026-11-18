@@ -295,6 +295,8 @@ model RuleSet {
   slotMinutes         Int
   /// null = pas de plafond journalier
   dailyCapPerPlayer   Int?
+  /// Anti-abus : temps de jeu crédité par jour et par joueur (minutes), null = illimité
+  dailyMaxMinutes     Int?     @default(90)
   pendingDelayMinutes Int
   expirationMonths    Int
   /// Validité d'un coupon de récompense (jours) — fixée par le GPR

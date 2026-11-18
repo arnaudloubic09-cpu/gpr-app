@@ -46,3 +46,9 @@ export async function saveReward(
   revalidatePath(`/clubs/${clubId}/recompenses`);
   redirect(`/clubs/${clubId}/recompenses`);
 }
+
+export async function importStandardCatalog(clubId: string, _prev: ActionResult | null) {
+  const res = await apiSend<{ added: number }>(`/clubs/${clubId}/admin/rewards/standard`, 'POST');
+  if (res.ok) revalidatePath(`/clubs/${clubId}/recompenses`);
+  return res;
+}

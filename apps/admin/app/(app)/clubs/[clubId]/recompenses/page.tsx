@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { Badge, Empty, PageHeader } from '@/components/ui';
 import { apiGet } from '@/lib/api';
 import { CATEGORY_LABELS, date, n, rewardValue } from '@/lib/format';
-import { saveReward } from './actions';
+import { ActionForm } from '@/components/action-form';
+import { importStandardCatalog, saveReward } from './actions';
 import { RewardForm } from './reward-form';
 
 type Reward = {
@@ -27,6 +28,15 @@ export default async function RewardsPage({ params }: { params: Promise<{ clubId
       <PageHeader
         title="Récompenses"
         subtitle="Ce que vos joueurs peuvent obtenir avec leurs points GPR dans votre club."
+        actions={
+          <ActionForm
+            action={importStandardCatalog.bind(null, clubId)}
+            submitLabel="Importer le catalogue type GPR"
+            successMessage="Catalogue type ajouté (les récompenses déjà présentes sont conservées)."
+            variant="secondary"
+            className="inline-form"
+          />
+        }
       />
       <div className="card table-wrap">
         {rewards.length === 0 ? (

@@ -39,11 +39,12 @@ export const COUPON_STATUS: Record<CouponView['status'], string> = {
   CANCELLED: 'Annulé — points remboursés',
 };
 
+/** Couleur de chaque niveau (cadre du solde, carte de membre) ; texte blanc lisible sur chacune. */
 export const LEVEL_COLORS: Record<string, string> = {
-  BRONZE: '#b45309',
-  SILVER: '#64748b',
-  GOLD: '#ca8a04',
-  PLATINUM: '#0e7490',
+  BRONZE: '#9a5b2e',
+  SILVER: '#6b7280',
+  GOLD: '#a16207',
+  PLATINUM: '#334155',
 };
 
 export const BADGE_ICONS: Record<string, string> = {

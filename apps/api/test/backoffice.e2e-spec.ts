@@ -266,6 +266,27 @@ describe('Back-office : admin club et super admin (intégration)', () => {
         .expect(201);
     });
 
+    it('importe le catalogue type GPR une seule fois, puis le club le modifie librement', async () => {
+      const h = await as(admin);
+      expect(
+        (await http().post(`/clubs/${club.id}/admin/rewards/standard`).set(h).expect(201)).body
+          .added,
+      ).toBe(5);
+      expect(
+        (await http().post(`/clubs/${club.id}/admin/rewards/standard`).set(h).expect(201)).body
+          .added,
+      ).toBe(0);
+      const list = await http().get(`/clubs/${club.id}/admin/rewards`).set(h).expect(200);
+      const demi = list.body.find((r: { title: string }) => r.title === 'Un demi offert');
+      expect(demi).toMatchObject({ costGpr: 150, category: 'DRINK' });
+      await http()
+        .patch(`/clubs/${club.id}/admin/rewards/${demi.id}`)
+        .set(h)
+        .send({ category: 'DRINK', kind: 'FREE_ITEM', title: 'Un demi offert', costGpr: 120 })
+        .expect(200);
+      await http().post(`/clubs/${otherClub.id}/admin/rewards/standard`).set(h).expect(403);
+    });
+
     it('un admin ne gère pas le catalogue d’un autre club', async () => {
       await http()
         .post(`/clubs/${otherClub.id}/admin/rewards`)

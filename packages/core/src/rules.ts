@@ -24,6 +24,11 @@ export interface GprRules {
   slotMinutes: number;
   /** Plafond de points GPR par jour et par joueur. null = pas de plafond (choix actuel du GPR). */
   dailyCapPerPlayer: number | null;
+  /**
+   * Anti-abus : temps de jeu maximal crédité par jour et par joueur, tous clubs confondus (minutes).
+   * null = pas de limite. Les parties qui se chevauchent ne sont comptées qu'une fois.
+   */
+  dailyMaxMinutes: number | null;
   pendingDelayMinutes: number;
   expirationMonths: number;
   /** Durée de validité d'un coupon de récompense, en jours. */
@@ -42,6 +47,7 @@ export const DEFAULT_GPR_RULES: GprRules = {
   pointsPerSlot: 10,
   slotMinutes: 30,
   dailyCapPerPlayer: null,
+  dailyMaxMinutes: 90,
   pendingDelayMinutes: 120,
   expirationMonths: 12,
   couponValidityDays: 7,

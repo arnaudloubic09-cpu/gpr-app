@@ -26,6 +26,12 @@ Il est mis à jour à chaque étape.
 
 La checklist technique détaillée est dans `mise-en-production.md`, section 8.
 
+## Idées et demandes en attente de précisions
+
+- Inscription aux tournois du circuit GPR dans l'app (questions posées le 18/11/2026).
+- Travail sur le design (charte graphique, logo, couleurs à fournir).
+- « Défi match » entre joueurs avec des points : à cadrer juridiquement (pas de mise de points par les joueurs).
+
 ## Échéances
 
 | Échéance                         | Détail                                                                                                                                                                             |
@@ -38,6 +44,11 @@ La checklist technique détaillée est dans `mise-en-production.md`, section 8.
 
 - Points : 10 points GPR par 30 min, au prorata, heures creuses ×2 (lun.–ven., avant 12 h et 14 h–17 h) si le club l'active, pas de plafond, expiration à 12 mois.
 - Pas de rétroactivité : seules les parties jouées après la liaison du compte comptent.
+- Anti-abus : **1 h 30 de jeu crédité maximum par jour et par joueur** (tous clubs), parties simultanées comptées une fois ;
+  si le club remplace un joueur dans la réservation, les points suivent (retrait / crédit).
+- Catalogue type GPR (facultatif, modifiable par chaque club) : un demi 150 · -20 % tournoi 210 · -10 % cours 240 ·
+  boîte de balles 270 · -20 € shop 500. Chaque club reste autonome sur ses récompenses (nature, réduction, points).
+- Cadre du solde aux couleurs du niveau (bronze, argent, or, platine).
 - Coupons valables 7 jours, remboursés automatiquement s'ils ne sont pas utilisés.
 - Niveaux Bronze / Argent (500) / Or (1 500) / Platine (3 000) sur 12 mois ; avantages par niveau définis par chaque club.
 - Carte VIP : gratuite au niveau Platine (1 an) ou 60 € par an ; codes partenaires ; **désactivée** jusqu'à la signature des partenariats.

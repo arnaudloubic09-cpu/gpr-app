@@ -6,7 +6,7 @@ import { LevelCard } from '../../src/components/level-card';
 import { TransactionRow } from '../../src/components/transaction-row';
 import { Card, Empty, ErrorText, Loading, Screen, styles, Title } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
-import { points } from '../../src/lib/format';
+import { LEVEL_COLORS, points } from '../../src/lib/format';
 import { colors, radius, space } from '../../src/lib/theme';
 import { useApi } from '../../src/lib/use-api';
 
@@ -54,19 +54,29 @@ export default function HomeScreen() {
 
       <View
         style={{
-          backgroundColor: colors.primary,
+          // Le cadre prend la couleur du niveau du joueur (bronze, argent, or, platine)
+          backgroundColor: (level.data && LEVEL_COLORS[level.data.current.code]) || colors.primary,
           borderRadius: radius.lg,
           padding: space(5),
           marginBottom: space(3),
         }}
         accessibilityLabel={`Solde : ${points(balance.data?.available ?? 0)}`}
       >
-        <Text style={{ color: '#ccfbf1', fontWeight: '600' }}>Points GPR disponibles</Text>
+        <Text style={{ color: '#fff', fontWeight: '600', opacity: 0.9 }}>
+          Points GPR disponibles{level.data ? ` · Niveau ${level.data.current.label}` : ''}
+        </Text>
         <Text style={{ color: '#fff', fontSize: 44, fontWeight: '900', marginVertical: space(1) }}>
           {balance.data ? balance.data.available.toLocaleString('fr-FR') : '—'}
         </Text>
-        <Text style={{ color: '#ccfbf1' }}>Valables dans tous les clubs du groupement</Text>
+        <Text style={{ color: '#fff', opacity: 0.9 }}>
+          Valables dans tous les clubs du groupement
+        </Text>
       </View>
+      <Text
+        style={{ color: colors.muted, fontSize: 13, marginBottom: space(3), textAlign: 'center' }}
+      >
+        Vos points sont crédités automatiquement après chaque partie, rien à présenter.
+      </Text>
 
       {balance.data && (balance.data.pending > 0 || balance.data.expiringSoon > 0) ? (
         <View style={{ flexDirection: 'row', gap: space(3) }}>

@@ -8,7 +8,7 @@
  */
 import { faker } from '@faker-js/faker/locale/fr';
 import { Prisma, PrismaClient, Role } from '@prisma/client';
-import { DEFAULT_GPR_RULES, validateRewardConfig } from '@gpr/core';
+import { DEFAULT_GPR_RULES, STANDARD_CATALOG, validateRewardConfig } from '@gpr/core';
 import { CryptoService } from '../common/crypto/crypto.service';
 
 const prisma = new PrismaClient();
@@ -37,43 +37,10 @@ const CLUBS = [
 
 type RewardSeed = Omit<Prisma.RewardUncheckedCreateInput, 'clubId'>;
 
+// Catalogue type GPR pour les deux clubs de démonstration
 const REWARDS: Record<(typeof CLUBS)[number]['slug'], RewardSeed[]> = {
-  'padel-arena-toulouse': [
-    { category: 'DRINK', kind: 'FREE_ITEM', title: 'Bière pression offerte (25 cl)', costGpr: 80 },
-    { category: 'SNACK', kind: 'FREE_ITEM', title: 'Part de pizza offerte', costGpr: 100 },
-    {
-      category: 'EQUIPMENT',
-      kind: 'FREE_ITEM',
-      title: 'Tube de 3 balles',
-      costGpr: 150,
-      stock: 40,
-    },
-    {
-      category: 'LESSON',
-      kind: 'DISCOUNT_PERCENT',
-      title: '-20 % sur un cours collectif',
-      costGpr: 250,
-      discountValue: 20,
-    },
-  ],
-  'smash-club-bordeaux': [
-    { category: 'DRINK', kind: 'FREE_ITEM', title: 'Soft ou bière offerte', costGpr: 70 },
-    {
-      category: 'EQUIPMENT',
-      kind: 'DISCOUNT_AMOUNT',
-      title: '-10 € sur une raquette',
-      costGpr: 400,
-      discountValue: 1000,
-      stock: 15,
-    },
-    {
-      category: 'TOURNAMENT',
-      kind: 'DISCOUNT_PERCENT',
-      title: '-50 % sur l’inscription au tournoi P100',
-      costGpr: 300,
-      discountValue: 50,
-    },
-  ],
+  'padel-arena-toulouse': STANDARD_CATALOG,
+  'smash-club-bordeaux': STANDARD_CATALOG,
 };
 
 async function main() {
@@ -85,6 +52,7 @@ async function main() {
     pointsPerSlot: r.pointsPerSlot,
     slotMinutes: r.slotMinutes,
     dailyCapPerPlayer: r.dailyCapPerPlayer,
+    dailyMaxMinutes: r.dailyMaxMinutes,
     pendingDelayMinutes: r.pendingDelayMinutes,
     expirationMonths: r.expirationMonths,
     couponValidityDays: r.couponValidityDays,

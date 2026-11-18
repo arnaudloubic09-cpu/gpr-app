@@ -65,3 +65,10 @@ describe('validateRewardConfig', () => {
     }
   });
 });
+
+import { STANDARD_CATALOG } from './rewards';
+describe('catalogue type GPR', () => {
+  it('ne contient que des récompenses valides (aucune partie de padel, cours en réduction)', () => {
+    for (const r of STANDARD_CATALOG) expect(validateRewardConfig(r)).toEqual([]);
+  });
+});

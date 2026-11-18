@@ -74,6 +74,7 @@ export async function ensureDefaultRules() {
         pointsPerSlot: r.pointsPerSlot,
         slotMinutes: r.slotMinutes,
         dailyCapPerPlayer: null,
+        dailyMaxMinutes: r.dailyMaxMinutes,
         pendingDelayMinutes: r.pendingDelayMinutes,
         expirationMonths: r.expirationMonths,
         couponValidityDays: r.couponValidityDays,

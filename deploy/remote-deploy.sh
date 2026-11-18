@@ -145,6 +145,8 @@ if [ "${SEED_DEMO:-false}" = true ] && [ "$GPR_ENV" != production ]; then
     log "Chargement des clubs et joueurs de démonstration"
     "${COMPOSE[@]}" run --rm api node dist/cli/seed.js
   fi
+  log "Catalogue type GPR sur les clubs de démonstration"
+  "${COMPOSE[@]}" run --rm api node dist/cli/demo-catalog.js
 fi
 
 # 8. Compte super admin

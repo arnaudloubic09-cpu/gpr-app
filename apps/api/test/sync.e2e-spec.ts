@@ -206,6 +206,55 @@ describe('Synchronisation et moteur de points (intégration)', () => {
     });
   });
 
+  describe('anti-abus', () => {
+    it('plafond de 1 h 30 de jeu crédité par jour, tous clubs confondus', async () => {
+      addBooking('matin', '2026-11-10T09:00', '2026-11-10T10:00', { participants: [1] }); // 60 min
+      addBooking('midi', '2026-11-10T12:00', '2026-11-10T13:30', { participants: [1] }); // 90 min → 30 créditées
+      addBooking('soir', '2026-11-10T19:00', '2026-11-10T20:30', { participants: [1] }); // plafond atteint
+      addBooking('lendemain', '2026-11-11T19:00', '2026-11-11T20:30', { participants: [1] }); // nouveau jour
+      await sync.syncClub(club.id, { now: NOW });
+      const earns = await prisma.ledgerEntry.findMany({
+        where: { userId: players[0].id, type: 'EARN' },
+        orderBy: { earnedAt: 'asc' },
+      });
+      expect(earns.map((e) => e.amount)).toEqual([20, 10, 30]);
+      await sync.syncClub(club.id, { now: NOW }); // relance : rien de plus
+      expect(
+        await prisma.ledgerEntry.count({ where: { userId: players[0].id, type: 'EARN' } }),
+      ).toBe(3);
+    });
+
+    it('inscrit sur deux parties en même temps : le temps n’est compté qu’une fois', async () => {
+      addBooking('t1', '2026-11-12T18:00', '2026-11-12T19:00', { participants: [1, 2] });
+      addBooking('t2', '2026-11-12T18:00', '2026-11-12T19:00', { participants: [1, 3] });
+      await sync.syncClub(club.id, { now: NOW });
+      expect((await balanceOf(players[0])).available).toBe(20);
+      expect((await balanceOf(players[1])).available).toBe(20);
+      expect((await balanceOf(players[2])).available).toBe(20);
+    });
+
+    it('le club remplace un joueur par un autre : les points suivent', async () => {
+      const id = addBooking('swap', '2026-11-13T18:00', '2026-11-13T19:30', {
+        participants: [1, 2],
+      });
+      await sync.syncClub(club.id, { now: NOW });
+      expect((await balanceOf(players[1])).available).toBe(30);
+
+      fake.participants[id] = [{ externalPlayerId: extId(1) }, { externalPlayerId: extId(3) }]; // p2 → p3
+      await sync.syncClub(club.id, { now: NOW });
+      expect((await balanceOf(players[1])).available).toBe(0);
+      expect((await balanceOf(players[2])).available).toBe(30);
+      expect((await balanceOf(players[0])).available).toBe(30);
+
+      // Réintégré ensuite : recrédité une seule fois
+      fake.participants[id] = [{ externalPlayerId: extId(1) }, { externalPlayerId: extId(2) }];
+      await sync.syncClub(club.id, { now: NOW });
+      await sync.syncClub(club.id, { now: NOW });
+      expect((await balanceOf(players[1])).available).toBe(30);
+      expect((await balanceOf(players[2])).available).toBe(0);
+    });
+  });
+
   describe('bonus heures creuses (×2, lun–ven, au prorata)', () => {
     it('écrit un gain et un bonus distincts quand le club a activé le bonus', async () => {
       await prisma.club.update({ where: { id: club.id }, data: { offPeakBonusEnabled: true } });

@@ -55,3 +55,48 @@ export function validateRewardConfig(input: RewardConfigInput): RewardConfigErro
 
   return errors;
 }
+
+/** Catalogue type proposé par le GPR (chaque club peut l'importer puis l'adapter). */
+export const STANDARD_CATALOG: {
+  category: RewardCategory;
+  kind: RewardKind;
+  title: string;
+  costGpr: number;
+  discountValue: number | null;
+}[] = [
+  {
+    category: 'DRINK',
+    kind: 'FREE_ITEM',
+    title: 'Un demi offert',
+    costGpr: 150,
+    discountValue: null,
+  },
+  {
+    category: 'TOURNAMENT',
+    kind: 'DISCOUNT_PERCENT',
+    title: '-20 % sur un tournoi de padel',
+    costGpr: 210,
+    discountValue: 20,
+  },
+  {
+    category: 'LESSON',
+    kind: 'DISCOUNT_PERCENT',
+    title: '-10 % sur un cours de padel',
+    costGpr: 240,
+    discountValue: 10,
+  },
+  {
+    category: 'EQUIPMENT',
+    kind: 'FREE_ITEM',
+    title: 'Une boîte de balles offerte',
+    costGpr: 270,
+    discountValue: null,
+  },
+  {
+    category: 'EQUIPMENT',
+    kind: 'DISCOUNT_AMOUNT',
+    title: '-20 € sur le shop',
+    costGpr: 500,
+    discountValue: 2000,
+  },
+];

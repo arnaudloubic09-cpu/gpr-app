@@ -1,7 +1,13 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BookingStatus, Club, ClubConnectorConfig, Prisma, SyncRun } from '@prisma/client';
-import { addMonths, computeBookingPoints } from '@gpr/core';
+import {
+  addMonths,
+  computeIntervalsPoints,
+  creditableIntervals,
+  Interval,
+  localDayKey,
+} from '@gpr/core';
 import type {
   Booking as ExternalBooking,
   BookingConnector,
@@ -102,6 +108,8 @@ export class SyncService {
 
       const bookings = await ctx.connector.listEndedBookings(ctx.cfg, since, now);
       bookingsFetched = bookings.length;
+      // Ordre chronologique : pour le plafond journalier, les premières parties jouées comptent en premier.
+      bookings.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
       for (const b of bookings) entriesCreated += await this.processBooking(ctx, b);
 
       const done = await this.finish(run.id, clubId, 'SUCCESS', {
@@ -199,33 +207,43 @@ export class SyncService {
       });
     }
 
-    // Joueurs crédités : tous les participants identifiés ; à défaut de liste, le réservataire.
+    // Joueurs à créditer : tous les participants identifiés ; à défaut de liste, le réservataire.
+    // La liste est relue à chaque synchronisation : si le club remplace un joueur par un autre,
+    // les points suivent (retrait pour l'ancien, crédit pour le nouveau).
     const externalIds = new Set(participants.map((p) => p.externalPlayerId));
     if (booking.bookerExternalId) externalIds.add(booking.bookerExternalId);
-    if (!externalIds.size) return 0;
-
-    const links = await this.prisma.playerExternalLink.findMany({
-      where: {
-        provider: ext.provider,
-        externalPlayerId: { in: [...externalIds] },
-        // Pas de rétroactivité : seules les parties terminées après la liaison du compte comptent.
-        linkedAt: { lte: booking.endsAt },
-        user: { role: 'PLAYER', anonymizedAt: null },
-      },
-      select: { userId: true },
-    });
+    const links = externalIds.size
+      ? await this.prisma.playerExternalLink.findMany({
+          where: {
+            provider: ext.provider,
+            externalPlayerId: { in: [...externalIds] },
+            // Pas de rétroactivité : seules les parties terminées après la liaison du compte comptent.
+            linkedAt: { lte: booking.endsAt },
+            user: { role: 'PLAYER', anonymizedAt: null },
+          },
+          select: { userId: true },
+        })
+      : [];
     const userIds = [...new Set(links.map((l) => l.userId))];
-    if (!userIds.length) return 0;
 
-    const points = computeBookingPoints(
-      {
-        startsAt: booking.startsAt,
-        endsAt: booking.endsAt,
-        timezone: ctx.club.timezone,
-        offPeakBonusEnabled: ctx.club.offPeakBonusEnabled,
+    // Écritures de cette réservation encore actives (non contre-passées)
+    const existing = await this.prisma.ledgerEntry.findMany({
+      where: {
+        sourceType: 'BOOKING',
+        sourceId: booking.id,
+        type: { in: ['EARN', 'BONUS', 'REVERSAL'] },
       },
-      ctx.rules,
+    });
+    const reversedIds = new Set(
+      existing.filter((e) => e.type === 'REVERSAL').map((e) => e.reversesEntryId),
     );
+    const active = existing.filter((e) => e.type !== 'REVERSAL' && !reversedIds.has(e.id));
+
+    // 1. Joueurs retirés de la réservation : contre-passation de leurs points
+    const removed = active.filter((e) => !userIds.includes(e.userId));
+    let count = removed.length ? await this.createReversals(ctx, booking.id, removed) : 0;
+
+    // 2. Joueurs à créditer (plafond journalier de temps de jeu, chevauchements comptés une fois)
     const earnedAt = booking.endsAt;
     const common = {
       sourceType: 'BOOKING' as const,
@@ -236,42 +254,91 @@ export class SyncService {
       availableAt: new Date(earnedAt.getTime() + ctx.rules.pendingDelayMinutes * 60_000),
       expiresAt: addMonths(earnedAt, ctx.rules.expirationMonths),
     };
-    const entries: Prisma.LedgerEntryCreateManyInput[] = [];
+    let credited = 0;
     for (const userId of userIds) {
+      if (active.some((e) => e.userId === userId)) continue; // déjà crédité
+      const already = await this.creditedIntervalsSameDay(userId, booking, ctx.club.timezone);
+      const intervals = creditableIntervals(
+        { start: booking.startsAt, end: booking.endsAt },
+        already,
+        ctx.rules.dailyMaxMinutes,
+      );
+      const points = computeIntervalsPoints(
+        intervals,
+        { timezone: ctx.club.timezone, offPeakBonusEnabled: ctx.club.offPeakBonusEnabled },
+        ctx.rules,
+      );
+      if (points.basePoints <= 0) continue; // plafond atteint ou partie entièrement chevauchée
+      // Un joueur retiré puis réintégré reçoit une nouvelle écriture (nouvelle clé), jamais un doublon.
+      const attempt = existing.filter((e) => e.userId === userId && e.type === 'EARN').length;
       const key = `booking:${booking.id}:user:${userId}`;
-      if (points.basePoints > 0)
-        entries.push({
+      const suffix = attempt ? `#${attempt}` : '';
+      const entries: Prisma.LedgerEntryCreateManyInput[] = [
+        {
           ...common,
           userId,
           type: 'EARN',
           amount: points.basePoints,
-          idempotencyKey: `${key}:earn`,
-        });
-      if (points.bonusPoints > 0)
+          idempotencyKey: `${key}:earn${suffix}`,
+        },
+      ];
+      if (points.bonusPoints > 0) {
         entries.push({
           ...common,
           userId,
           type: 'BONUS',
           amount: points.bonusPoints,
-          idempotencyKey: `${key}:bonus`,
+          idempotencyKey: `${key}:bonus${suffix}`,
         });
+      }
+      const res = await this.prisma.ledgerEntry.createMany({ data: entries, skipDuplicates: true });
+      count += res.count;
+      if (res.count) credited++;
     }
-    const { count } = await this.prisma.ledgerEntry.createMany({
-      data: entries,
-      skipDuplicates: true,
-    });
-    if (count > 0) {
+    if (credited > 0) {
       await this.analytics.track('booking.credited', {
         clubId: ctx.club.id,
-        payload: {
-          bookingId: booking.id,
-          players: userIds.length,
-          points: points.totalPoints,
-          offPeakMinutes: points.offPeakMinutes,
-        },
+        payload: { bookingId: booking.id, players: credited },
       });
     }
     return count;
+  }
+
+  /** Parties du même joueur, le même jour (heure du club), dont les points sont actuellement crédités. */
+  private async creditedIntervalsSameDay(
+    userId: string,
+    booking: { id: string; startsAt: Date },
+    timezone: string,
+  ): Promise<Interval[]> {
+    const around = (h: number) => new Date(booking.startsAt.getTime() + h * 3600_000);
+    const earns = await this.prisma.ledgerEntry.findMany({
+      where: {
+        userId,
+        type: 'EARN',
+        sourceType: 'BOOKING',
+        sourceId: { not: booking.id },
+        earnedAt: { gte: around(-30), lte: around(30) },
+      },
+      select: { id: true, sourceId: true },
+    });
+    if (!earns.length) return [];
+    const reversed = new Set(
+      (
+        await this.prisma.ledgerEntry.findMany({
+          where: { type: 'REVERSAL', reversesEntryId: { in: earns.map((e) => e.id) } },
+          select: { reversesEntryId: true },
+        })
+      ).map((r) => r.reversesEntryId),
+    );
+    const ids = earns.filter((e) => !reversed.has(e.id)).map((e) => e.sourceId!);
+    const day = localDayKey(booking.startsAt, timezone);
+    const others = await this.prisma.booking.findMany({
+      where: { id: { in: ids } },
+      select: { startsAt: true, endsAt: true },
+    });
+    return others
+      .filter((b) => localDayKey(b.startsAt, timezone) === day)
+      .map((b) => ({ start: b.startsAt, end: b.endsAt }));
   }
 
   /** Partie annulée ou absence : contre-passation de chaque écriture déjà créditée (une seule fois). */
@@ -279,9 +346,22 @@ export class SyncService {
     const credited = await this.prisma.ledgerEntry.findMany({
       where: { sourceType: 'BOOKING', sourceId: bookingId, type: { in: ['EARN', 'BONUS'] } },
     });
-    if (!credited.length) return 0;
+    return credited.length ? this.createReversals(ctx, bookingId, credited) : 0;
+  }
+
+  private async createReversals(
+    ctx: Ctx,
+    bookingId: string,
+    entries: {
+      id: string;
+      userId: string;
+      amount: number;
+      clubId: string | null;
+      availableAt: Date;
+    }[],
+  ): Promise<number> {
     const { count } = await this.prisma.ledgerEntry.createMany({
-      data: credited.map((e) => ({
+      data: entries.map((e) => ({
         userId: e.userId,
         type: 'REVERSAL' as const,
         amount: -e.amount,
@@ -297,11 +377,12 @@ export class SyncService {
       })),
       skipDuplicates: true,
     });
-    if (count > 0)
+    if (count > 0) {
       await this.analytics.track('booking.reversed', {
         clubId: ctx.club.id,
         payload: { bookingId, entries: count },
       });
+    }
     return count;
   }
 

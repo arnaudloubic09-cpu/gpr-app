@@ -23,7 +23,9 @@ export default function CouponsScreen() {
 
   return (
     <Screen>
-      <Title subtitle="Présentez votre coupon à l’accueil du club">Mes coupons</Title>
+      <Title subtitle="À présenter uniquement pour retirer une récompense à l’accueil (les points des parties sont automatiques)">
+        Mes coupons
+      </Title>
       <View style={[styles.row, { marginBottom: space(4) }]}>
         <Chip label="À utiliser" active={scope === 'active'} onPress={() => setScope('active')} />
         <Chip label="Historique" active={scope === 'history'} onPress={() => setScope('history')} />
