@@ -14,13 +14,14 @@ Il est mis à jour à chaque étape.
 | 5   | Brevo : passer à une offre adaptée au volume de production (domaine `gpr-padel.fr` authentifié, expéditeur `no-reply@gpr-padel.fr` créé)             | GPR                    | Préproduction prête                   |
 | 6   | Compte de paiement Stripe au nom du GPR (vente en ligne de la carte VIP)                                                                             | GPR                    | Quand les partenariats seront prêts   |
 | 7   | Accords de sous-traitance (DPA) avec l'hébergeur et Brevo ; registre des traitements RGPD                                                            | GPR                    | À faire                               |
-| 8   | Validation en préproduction par au moins un club (parcours complet)                                                                                  | GPR + clubs            | Après la mise en ligne des tests      |
+| 8   | Validation en préproduction par au moins un club (parcours complet) — préproduction en ligne                                                         | GPR + clubs            | Après la mise en ligne des tests      |
 | 9   | Sauvegardes de production activées **et** restauration testée                                                                                        | Claude                 | À la mise en production               |
 
 ## Préproduction (tests)
 
 - Hébergement : **VPS OVH** (2 vCore, 4 Go RAM, 40 Go NVMe, sauvegarde quotidienne) ; domaine **gpr-padel.fr** chez OVH ; emails **Brevo**.
 - Adresses : `admin.preprod.gpr-padel.fr`, `app.preprod.gpr-padel.fr` (app web), `api.preprod.gpr-padel.fr`.
+- **En ligne depuis le 18/11/2026** (VPS OVH, HTTPS actif, clubs de démonstration chargés, compte super admin du GPR créé).
 - Mise en ligne et mises à jour : GitHub → Actions → **Déployer la préproduction** (guide : `preproduction.md`).
 
 La checklist technique détaillée est dans `mise-en-production.md`, section 8.
