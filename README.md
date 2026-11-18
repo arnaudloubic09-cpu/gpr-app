@@ -115,8 +115,8 @@ Décisions prises et actions restantes avant la production : [docs/suivi-projet.
 
 ## Préproduction
 
-Mise en ligne pas à pas (Oracle Cloud gratuit, domaine OVH, Brevo, déploiement en un clic depuis GitHub) :
-[docs/preproduction-oracle.md](docs/preproduction-oracle.md).
+Mise en ligne pas à pas (VPS OVH, domaine OVH, Brevo, déploiement en un clic depuis GitHub) :
+[docs/preproduction.md](docs/preproduction.md).
 
 ## Documentation des API de réservation
 

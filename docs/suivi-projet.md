@@ -19,9 +19,9 @@ Il est mis à jour à chaque étape.
 
 ## Préproduction (tests)
 
-- Hébergement : **Oracle Cloud « Always Free »** (région France) ; domaine **gpr-padel.fr** chez OVH ; emails **Brevo**.
+- Hébergement : **VPS OVH** (2 vCore, 4 Go RAM, 40 Go NVMe, sauvegarde quotidienne) ; domaine **gpr-padel.fr** chez OVH ; emails **Brevo**.
 - Adresses : `admin.preprod.gpr-padel.fr`, `app.preprod.gpr-padel.fr` (app web), `api.preprod.gpr-padel.fr`.
-- Mise en ligne et mises à jour : GitHub → Actions → **Déployer la préproduction** (guide : `preproduction-oracle.md`).
+- Mise en ligne et mises à jour : GitHub → Actions → **Déployer la préproduction** (guide : `preproduction.md`).
 
 La checklist technique détaillée est dans `mise-en-production.md`, section 8.
 

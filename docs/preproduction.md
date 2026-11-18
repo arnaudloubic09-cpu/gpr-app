@@ -1,7 +1,7 @@
-# Mettre en ligne la préproduction (Oracle Cloud gratuit + domaine OVH)
+# Mettre en ligne la préproduction (VPS OVH + domaine OVH + Brevo)
 
-Durée : environ 45 minutes la première fois. Aucune commande à taper : tout se fait dans les
-consoles Oracle, OVH, Brevo et GitHub. **Ne partagez jamais de mot de passe, clé ou secret dans une
+Durée : environ 45 minutes la première fois. Une seule commande à taper (la clé d'accès) ; le reste se fait
+dans les consoles OVH, Brevo et GitHub. **Ne partagez jamais de mot de passe, clé ou secret dans une
 conversation** : ils se saisissent uniquement dans les secrets GitHub (étape 4).
 
 Adresses obtenues à la fin :
@@ -14,32 +14,22 @@ Adresses obtenues à la fin :
 
 ---
 
-## Étape 1 — Créer le serveur gratuit chez Oracle Cloud
+## Étape 1 — Le serveur (VPS OVH)
 
-1. Créer un compte sur **cloud.oracle.com** (offre « Free Tier »).
-   ⚠ La **région d'origine** se choisit à l'inscription et ne peut plus être changée : prendre une région de
-   l'**Union européenne** (France si disponible, sinon **Germany Central – Frankfurt** ou **Netherlands Northwest –
-   Amsterdam**). Une carte bancaire est demandée pour vérifier l'identité ; rien n'est débité tant qu'on reste dans
-   les ressources « Always Free ».
-2. Menu ☰ → **Compute → Instances → Create instance**.
-3. **Name** : `gpr-preprod`.
-4. **Image and shape** → _Edit_ :
-   - Image : **Canonical Ubuntu 24.04** ;
-   - Shape : **Ampere – VM.Standard.A1.Flex**, **2 OCPU et 12 Go** de mémoire (gratuit jusqu'à 4 OCPU / 24 Go).
-   - Si Oracle répond « Out of capacity » : réessayer un peu plus tard ou choisir un autre _Availability domain_.
-5. **Networking** : laisser _Create new virtual cloud network_ et _Assign a public IPv4 address_ cochés.
-6. **Add SSH keys** : choisir **Generate a key pair for me** puis **Save private key**.
-   Ranger ce fichier (`ssh-key-….key`) en lieu sûr : c'est la clé d'accès au serveur.
-7. **Create**. Quand l'instance est _Running_, noter son **Public IP address** (ex. `141.145.x.x`).
+1. **Clé d'accès** (une seule fois, sur votre ordinateur Windows, dans PowerShell) :
+   ```
+   mkdir $HOME\.ssh
+   ssh-keygen -t ed25519 -C gpr-preprod -f $HOME\.ssh\gpr_preprod
+   ```
+   Appuyer deux fois sur **Entrée** à la question de la _passphrase_ (aucun mot de passe).
+   Afficher la clé **publique** : `type $HOME\.ssh\gpr_preprod.pub` (ligne `ssh-ed25519 AAAA… gpr-preprod`).
+   Le fichier `gpr_preprod` (sans `.pub`) est la clé **privée** : ne jamais la partager, elle ne servira que dans GitHub.
+2. **Commander le VPS** (2 vCore, 4 Go RAM, 40 Go) : Ubuntu 24.04 (ou 26.04), localisation en Europe.
+3. **Installer la clé** : à la livraison, espace client → **Bare Metal Cloud → VPS** → votre VPS →
+   cadre « OS / Distribution » → **… → Réinstaller mon VPS** → Ubuntu 24.04 (ou 26.04) + **coller la clé publique**.
+   Compter 5 à 10 minutes. Noter l'**adresse IPv4** du VPS (page du VPS ou email de livraison).
 
-### Ouvrir les ports web (80 et 443)
-
-8. Sur la page de l'instance : **Primary VNIC → Subnet** (lien) → **Security Lists** → la liste par défaut →
-   **Add Ingress Rules**, deux fois :
-   - Source CIDR `0.0.0.0/0`, IP Protocol **TCP**, Destination port **80** ;
-   - Source CIDR `0.0.0.0/0`, IP Protocol **TCP**, Destination port **443**.
-
-(Le pare-feu interne du serveur est ouvert automatiquement lors du déploiement.)
+Les ports web sont ouverts par défaut chez OVH ; le déploiement configure le reste.
 
 ## Étape 2 — Faire pointer les adresses vers le serveur (OVH)
 
