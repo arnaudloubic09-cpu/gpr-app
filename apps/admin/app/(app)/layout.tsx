@@ -47,7 +47,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       },
       {
         title: 'Espaces clubs',
-        items: clubs.map((c) => ({ href: `/clubs/${c.id}`, label: c.name })),
+        items: clubs.map((c) => ({
+          href: `/clubs/${c.id}`,
+          label: c.name,
+          children: clubItems(c.id).slice(1),
+        })),
       },
     ];
   }

@@ -119,6 +119,11 @@ main {
   font-weight: 600;
   box-shadow: inset 3px 0 0 var(--yellow);
 }
+.sidebar-nav a.sub {
+  padding: 6px 10px 6px 24px;
+  font-size: 0.86rem;
+  color: #c9cacc;
+}
 .sidebar-footer {
   margin-top: auto;
   padding: 12px 8px 0;
