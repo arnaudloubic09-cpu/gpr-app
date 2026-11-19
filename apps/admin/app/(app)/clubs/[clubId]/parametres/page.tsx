@@ -26,7 +26,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ clubI
         <p className="muted">
           Les heures creuses sont définies par le GPR pour tous les clubs : du lundi au vendredi,
           avant 12 h et de 14 h à 17 h. Activées, elles rapportent{' '}
-          <strong>2 fois plus de points GPR</strong> aux joueurs de votre club sur ces créneaux.
+          <strong>1,5 fois plus de points GPR</strong> aux joueurs de votre club sur ces créneaux.
         </p>
         <label className="checkbox">
           <input

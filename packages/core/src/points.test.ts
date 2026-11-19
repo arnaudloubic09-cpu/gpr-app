@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { computeBookingPoints, isOffPeak } from './points';
 import { DEFAULT_GPR_RULES } from './rules';
 
-const rules = DEFAULT_GPR_RULES;
+// Les scénarios détaillés ci-dessous vérifient le calcul avec un multiplicateur ×2 fixé ;
+// la valeur par défaut du GPR (×1,5) est vérifiée séparément.
+const rules = { ...DEFAULT_GPR_RULES, offPeakMultiplier: 2 };
 const PARIS = 'Europe/Paris';
 
 /** Créneau exprimé en heure de Paris. Novembre = UTC+1. */
@@ -154,5 +156,13 @@ describe('anti-abus : temps de jeu crédité (1 h 30 par jour, chevauchements co
     expect(
       computeIntervalsPoints([], { timezone: PARIS, offPeakBonusEnabled: true }, rules).totalPoints,
     ).toBe(0);
+  });
+});
+
+describe('valeur par défaut du GPR', () => {
+  it('heures creuses ×1,5 : 60 min en heures creuses = 30 points GPR', () => {
+    expect(DEFAULT_GPR_RULES.offPeakMultiplier).toBe(1.5);
+    const r = computeBookingPoints(slot(WED, '10:00', '11:00'), DEFAULT_GPR_RULES);
+    expect(r).toMatchObject({ basePoints: 20, bonusPoints: 10, totalPoints: 30 });
   });
 });

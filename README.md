@@ -43,7 +43,7 @@ Les codes de connexion (OTP) envoyés en développement sont lisibles dans **Mai
 ## Moteur de points GPR (phase 2)
 
 - **Barème** : 10 points GPR par 30 min, au prorata (75 min = 25 points GPR), sans plafond journalier.
-- **Heures creuses** : lun–ven avant 12 h et 14 h–17 h (heure locale du club), points ×2 au prorata des minutes,
+- **Heures creuses** : lun–ven avant 12 h et 14 h–17 h (heure locale du club), points ×1,5 au prorata des minutes,
   si le club a activé le bonus. Le bonus est une écriture distincte (`BONUS`) pour les statistiques.
 - **Crédit** : participants identifiés (à défaut, le réservataire), points « en attente » jusqu'à H+2.
   Pas de rétroactivité : seules les parties terminées après la liaison du compte comptent.
@@ -136,7 +136,7 @@ pnpm typecheck
   calculé ; le statut « en attente / validé » est déduit de `availableAt` (H+2).
 - **Pas de points contre une partie de padel** : aucune catégorie correspondante dans l'enum, contrainte CHECK
   et validation serveur. Les cours ne sont autorisés **qu'en réduction**, jamais gratuits.
-- **Règles GPR communes** (barème, plafond, expiration, heures creuses : avant 12 h et 14 h–17 h, ×2) définies par
+- **Règles GPR communes** (barème, plafond, expiration, heures creuses : avant 12 h et 14 h–17 h, ×1,5) définies par
   le super admin et versionnées ; chaque club active ou non le bonus heures creuses et gère son catalogue.
 - **Sécurité** : OTP haché avec essais et demandes limités, refresh tokens à rotation avec détection de rejeu,
   jetons du back-office en cookies httpOnly, identifiants connecteurs chiffrés AES-256-GCM, journal d'audit immuable.

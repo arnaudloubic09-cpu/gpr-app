@@ -52,7 +52,7 @@ export const DEFAULT_GPR_RULES: GprRules = {
   expirationMonths: 12,
   couponValidityDays: 7,
   clubAdjustmentMax: 200,
-  offPeakMultiplier: 2,
+  offPeakMultiplier: 1.5,
   offPeakWindows: [
     { days: WEEKDAYS, start: '00:00', end: '12:00' },
     { days: WEEKDAYS, start: '14:00', end: '17:00' },

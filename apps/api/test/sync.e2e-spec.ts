@@ -255,7 +255,7 @@ describe('Synchronisation et moteur de points (intégration)', () => {
     });
   });
 
-  describe('bonus heures creuses (×2, lun–ven, au prorata)', () => {
+  describe('bonus heures creuses (lun–ven, au prorata)', () => {
     it('écrit un gain et un bonus distincts quand le club a activé le bonus', async () => {
       await prisma.club.update({ where: { id: club.id }, data: { offPeakBonusEnabled: true } });
       addBooking('b1', '2026-11-10T11:00', '2026-11-10T12:30', { participants: [1] }); // à cheval
@@ -264,9 +264,14 @@ describe('Synchronisation et moteur de points (intégration)', () => {
         where: { userId: players[0].id },
         orderBy: { type: 'asc' },
       });
+      // 60 min en heures creuses + 30 min normales, quel que soit le multiplicateur en vigueur
+      const m = Number(
+        (await prisma.ruleSet.findFirstOrThrow({ orderBy: { version: 'desc' } })).offPeakMultiplier,
+      );
+      const bonus = Math.floor((10 * (60 * m + 30)) / 30) - 30;
       expect(entries.map((e) => [e.type, e.amount])).toEqual([
         ['EARN', 30],
-        ['BONUS', 20],
+        ['BONUS', bonus],
       ]);
       expect(entries.every((e) => e.ruleSetVersion !== null)).toBe(true);
     });
