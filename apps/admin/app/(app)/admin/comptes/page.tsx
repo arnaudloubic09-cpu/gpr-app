@@ -35,7 +35,7 @@ export default async function AccountsPage() {
               <th>Nom</th>
               <th>Email</th>
               <th>Rôle</th>
-              <th>Dernière connexion</th>
+              <th>Dernière activité</th>
               <th>Statut</th>
               <th></th>
             </tr>

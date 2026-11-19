@@ -66,6 +66,11 @@ export class TokenService {
       await this.revokeFamily(stored.familyId);
       throw invalid;
     }
+    // Dernière utilisation : mise à jour à chaque reprise de session (ouverture de l'app), pas seulement à la saisie d'un code
+    await this.prisma.user.update({
+      where: { id: stored.userId },
+      data: { lastLoginAt: new Date() },
+    });
     return this.issue(stored.user, stored.familyId);
   }
 

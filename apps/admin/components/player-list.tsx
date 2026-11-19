@@ -41,7 +41,7 @@ export function PlayerList({
                 <th>Joueur</th>
                 <th>Email</th>
                 <th>Club principal</th>
-                <th>Dernière connexion</th>
+                <th>Dernière activité</th>
               </tr>
             </thead>
             <tbody>

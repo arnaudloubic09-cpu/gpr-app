@@ -145,12 +145,17 @@ describe('Authentification OTP (intégration)', () => {
     it('effectue une rotation et révoque toute la famille si un ancien jeton est rejoué', async () => {
       const email = uniqueEmail('refresh');
       const first = await login(app, mail, email, 'MOBILE');
+      const old = new Date('2026-01-01T00:00:00Z');
+      await prisma.user.update({ where: { email }, data: { lastLoginAt: old } });
 
       const rotated = await http()
         .post('/auth/refresh')
         .send({ refreshToken: first.refreshToken })
         .expect(200);
       expect(rotated.body.refreshToken).not.toEqual(first.refreshToken);
+      // La reprise de session (ouverture de l'app) met à jour la dernière activité
+      const u = await prisma.user.findUniqueOrThrow({ where: { email } });
+      expect(u.lastLoginAt!.getTime()).toBeGreaterThan(old.getTime());
 
       // Rejeu de l'ancien jeton : refusé, et le nouveau est révoqué aussi.
       await http().post('/auth/refresh').send({ refreshToken: first.refreshToken }).expect(401);

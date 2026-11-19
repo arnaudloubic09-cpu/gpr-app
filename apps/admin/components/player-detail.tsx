@@ -80,7 +80,7 @@ export function PlayerDetail({
                 <td>{date(player.createdAt)}</td>
               </tr>
               <tr>
-                <td className="muted">Dernière connexion</td>
+                <td className="muted">Dernière activité</td>
                 <td>{dateTime(player.lastLoginAt)}</td>
               </tr>
               <tr>
