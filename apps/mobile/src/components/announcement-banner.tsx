@@ -14,32 +14,49 @@ export function AnnouncementBanner() {
     <View
       accessibilityRole="summary"
       style={{
-        backgroundColor: colors.primary,
+        backgroundColor: colors.card,
         borderRadius: radius.lg,
-        borderLeftWidth: 5,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderLeftWidth: 4,
         borderLeftColor: colors.accent,
         padding: space(4),
         marginBottom: space(3),
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space(1) }}>
-        <Ionicons name="megaphone-outline" size={16} color={colors.accent} />
-        <Text
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: space(2) }}>
+        <View
           style={{
-            color: colors.accent,
-            fontWeight: '700',
-            fontSize: 12,
-            marginLeft: 6,
-            letterSpacing: 0.5,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
+            backgroundColor: colors.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
-          INFO DU MOMENT · {a.club.name.toUpperCase()}
+          <Ionicons name="megaphone-outline" size={13} color={colors.primary} />
+        </View>
+        <Text
+          style={{
+            color: colors.muted,
+            fontWeight: '600',
+            fontSize: 12,
+            marginLeft: space(2),
+            letterSpacing: 0.4,
+            flex: 1,
+          }}
+          numberOfLines={1}
+        >
+          Info du moment · {a.club.name}
         </Text>
       </View>
-      <Text style={{ color: '#fff', fontSize: 18, fontFamily: fonts.display, marginBottom: 4 }}>
+      <Text
+        style={{ color: colors.primary, fontSize: 18, fontFamily: fonts.display, marginBottom: 4 }}
+      >
         {a.title}
       </Text>
-      <Text style={{ color: '#E7E7E5', lineHeight: 20 }}>{a.body}</Text>
+      <Text style={{ color: colors.text, lineHeight: 20 }}>{a.body}</Text>
     </View>
   );
 }
