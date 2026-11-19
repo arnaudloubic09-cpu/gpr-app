@@ -14,6 +14,8 @@ const clubItems = (id: string) => [
   { href: `/clubs/${id}/joueurs`, label: 'Joueurs' },
   { href: `/clubs/${id}/defis`, label: 'Défis' },
   { href: `/clubs/${id}/avantages`, label: 'Avantages par niveau' },
+  { href: `/clubs/${id}/info`, label: 'Info du moment' },
+  { href: `/clubs/${id}/partenaires`, label: 'Partenaires locaux' },
   { href: `/clubs/${id}/parametres`, label: 'Paramètres' },
 ];
 

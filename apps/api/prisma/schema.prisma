@@ -188,6 +188,8 @@ model Club {
   /// Le club choisit d'activer ou non le bonus heures creuses (plages et multiplicateur fixés par le GPR).
   offPeakBonusEnabled Boolean  @default(false)
   levelPerks          LevelPerk[]
+  announcements       ClubAnnouncement[]
+  localPartners       LocalPartner[]
   /// Comptoir : validation immédiate du coupon dès le scan (sans clic de confirmation)
   counterAutoValidate Boolean  @default(false)
   isActive            Boolean  @default(true)
@@ -635,4 +637,60 @@ model PartnerCode {
   @@unique([partnerId, code])
   @@index([partnerId, assignedToId])
   @@index([assignedToId])
+}
+
+// ─────────────────────────────── Info du moment & partenaires locaux ───────────────────────────────
+
+/// « Info du moment » d'un club, affichée en haut de l'accueil des joueurs dont c'est le club principal.
+model ClubAnnouncement {
+  id          String   @id @default(uuid()) @db.Uuid
+  clubId      String   @db.Uuid
+  title       String
+  body        String
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean  @default(true)
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  club  Club               @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  views AnnouncementView[]
+
+  @@index([clubId, startsAt, endsAt])
+}
+
+/// Statistiques d'affichage (une ligne par joueur et par info).
+model AnnouncementView {
+  id             String   @id @default(uuid()) @db.Uuid
+  announcementId String   @db.Uuid
+  userId         String   @db.Uuid
+  views          Int      @default(1)
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+
+  announcement ClubAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+}
+
+/// Partenaire local d'un club (restaurant, kiné, commerce…). Avantage actif pour les joueurs
+/// ayant joué dans ce club au cours des 30 derniers jours, sur présentation de l'app.
+model LocalPartner {
+  id          String   @id @default(uuid()) @db.Uuid
+  clubId      String   @db.Uuid
+  name        String
+  offer       String
+  description String?
+  address     String
+  /// Logo (PNG / JPEG / WebP, 300 Ko max), servi publiquement
+  logo        Bytes?
+  logoMime    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+
+  @@index([clubId, isActive])
 }

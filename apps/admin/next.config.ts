@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // Image Docker autonome (serveur + dépendances strictement nécessaires)
   output: 'standalone',
+  experimental: { serverActions: { bodySizeLimit: '1mb' } },
   outputFileTracingRoot: path.join(__dirname, '../../'),
   async headers() {
     return [

@@ -10,6 +10,10 @@ export function configureApp(app: INestApplication): void {
       'trust proxy',
       trustProxy,
     );
+  // Logos des partenaires envoyés en base64 : corps JSON jusqu'à 1 Mo
+  (app as unknown as { useBodyParser: (t: string, o: object) => void }).useBodyParser('json', {
+    limit: '1mb',
+  });
   app.use(helmet());
   const origins = (process.env.CORS_ORIGINS ?? '')
     .split(',')

@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { ClubAdminModule } from './club-admin/club-admin.module';
+import { ClubContentModule } from './club-content/club-content.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env';
@@ -38,6 +39,7 @@ import { VipModule } from './vip/vip.module';
     UsersModule,
     ClubsModule,
     ClubAdminModule,
+    ClubContentModule,
     SyncModule,
     SuperAdminModule,
   ],

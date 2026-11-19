@@ -77,6 +77,12 @@ export default function ProfileScreen() {
         icon="card-outline"
         onPress={() => router.push('/member-card')}
       />
+      <Button
+        label="Partenaires locaux"
+        variant="secondary"
+        icon="storefront-outline"
+        onPress={() => router.push('/local-partners')}
+      />
       {vip.data?.enabled ? (
         <Button
           label={vip.data.active ? 'Ma carte VIP' : 'Découvrir la carte VIP'}

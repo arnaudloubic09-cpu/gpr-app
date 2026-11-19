@@ -54,3 +54,5 @@ La checklist technique détaillée est dans `mise-en-production.md`, section 8.
 - Niveaux Bronze / Argent (500) / Or (1 500) / Platine (3 000) sur 12 mois ; avantages par niveau définis par chaque club.
 - Carte VIP : gratuite au niveau Platine (1 an) ou 60 € par an ; codes partenaires ; **désactivée** jusqu'à la signature des partenariats.
 - Suppression de compte avec 30 jours de rétractation.
+- « Info du moment » : un message (titre + texte court) publié par le club, affiché en haut de l'accueil des joueurs dont c'est le club principal, avec dates de début/fin et statistiques d'affichage.
+- Partenaires locaux : gérés par chaque club (logo, avantage, adresse avec itinéraire) ; avantage actif sur présentation de l'app si le joueur a joué dans ce club au cours des 30 derniers jours ; tous les partenaires visibles, ceux du club principal en premier.

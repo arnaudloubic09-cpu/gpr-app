@@ -1,10 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BalanceView, LevelStatus, TransactionItem } from '@gpr/core';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import { AnnouncementBanner } from '../../src/components/announcement-banner';
 import { LevelCard } from '../../src/components/level-card';
 import { TransactionRow } from '../../src/components/transaction-row';
-import { Card, Empty, ErrorText, Loading, Screen, styles, Title } from '../../src/components/ui';
+import {
+  Button,
+  Card,
+  Empty,
+  ErrorText,
+  Loading,
+  Screen,
+  styles,
+  Title,
+} from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
 import { LEVEL_COLORS, points } from '../../src/lib/format';
 import { colors, radius, space } from '../../src/lib/theme';
@@ -51,6 +61,8 @@ export default function HomeScreen() {
           </Pressable>
         </Link>
       </View>
+
+      <AnnouncementBanner />
 
       <View
         style={{
@@ -103,6 +115,14 @@ export default function HomeScreen() {
       <ErrorText>{balance.error}</ErrorText>
 
       {level.data ? <LevelCard level={level.data} /> : null}
+
+      <Button
+        label="Partenaires locaux"
+        variant="secondary"
+        icon="storefront-outline"
+        onPress={() => router.push('/local-partners')}
+      />
+      <View style={{ height: space(3) }} />
 
       <Card>
         <View style={[styles.row, { justifyContent: 'space-between' }]}>
