@@ -12,12 +12,14 @@ import { Loading } from '../src/components/ui';
 import { AuthProvider, useAuth } from '../src/lib/auth';
 import { screenFor } from '../src/lib/push';
 import { colors } from '../src/lib/theme';
+import { useWebAutoUpdate } from '../src/lib/web-update';
 
 /** Redirige selon l'état de la session : connexion, profil à compléter, ou application. */
 function Gate() {
   const { status, me } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  useWebAutoUpdate();
 
   useEffect(() => {
     if (status === 'loading') return;
