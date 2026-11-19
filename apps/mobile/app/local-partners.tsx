@@ -45,7 +45,7 @@ export default function LocalPartnersScreen() {
             {g.favorite ? '  ★' : ''}
           </Text>
           {g.items.map((p) => (
-            <Card key={p.id}>
+            <Card key={p.id} style={{ borderWidth: 2, borderColor: colors.primary }}>
               <View style={{ flexDirection: 'row', gap: space(3) }}>
                 {p.logoUrl ? (
                   <Image
