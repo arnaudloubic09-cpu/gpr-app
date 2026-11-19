@@ -47,7 +47,10 @@ export default async function InfoPage({
 }) {
   const { clubId } = await params;
   const { edit } = await searchParams;
-  const list = await apiGet<Announcement[]>(`/clubs/${clubId}/admin/announcements`);
+  const [list, audience] = await Promise.all([
+    apiGet<Announcement[]>(`/clubs/${clubId}/admin/announcements`),
+    apiGet<{ players: number }>(`/clubs/${clubId}/admin/announcements/audience`),
+  ]);
   const editing = list.find((a) => a.id === edit);
   const now = new Date();
   return (
@@ -56,6 +59,15 @@ export default async function InfoPage({
         title="Info du moment"
         subtitle="Un message court affiché en haut de l’accueil de l’app, pour les joueurs dont votre club est le club principal."
       />
+      <div className={`card kpi${audience.players === 0 ? ' warn' : ''}`}>
+        <div className="muted small">Joueurs qui verront l’info</div>
+        <div className="kpi-value">{n(audience.players)}</div>
+        <div className="muted small">
+          {audience.players === 0
+            ? 'Aucun joueur n’a encore choisi votre club comme club principal : l’info ne s’affichera chez personne. Le joueur le choisit dans l’app : Profil → Club principal.'
+            : 'Joueurs ayant choisi votre club comme club principal (Profil → Club principal dans l’app).'}
+        </div>
+      </div>
       <div className="card table-wrap">
         {list.length === 0 ? (
           <Empty>Aucune info publiée pour le moment.</Empty>

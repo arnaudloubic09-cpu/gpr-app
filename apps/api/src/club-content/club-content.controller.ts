@@ -29,6 +29,11 @@ import { ClubContentService } from './club-content.service';
 export class ClubContentAdminController {
   constructor(private readonly content: ClubContentService) {}
 
+  @Get('announcements/audience')
+  audience(@Param('clubId', ParseUUIDPipe) clubId: string) {
+    return this.content.announcementAudience(clubId);
+  }
+
   @Get('announcements')
   announcements(@Param('clubId', ParseUUIDPipe) clubId: string) {
     return this.content.listAnnouncements(clubId);

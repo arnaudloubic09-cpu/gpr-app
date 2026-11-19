@@ -55,6 +55,12 @@ describe('Info du moment et partenaires locaux (intégration)', () => {
         })
         .expect(201);
       const fan = await player(club.id);
+      await player(other.id);
+      const aud = await http()
+        .get(`/clubs/${club.id}/admin/announcements/audience`)
+        .set(h)
+        .expect(200);
+      expect(aud.body).toEqual({ players: 1 });
       const res = await http()
         .get('/me/announcement')
         .set(await as(fan))

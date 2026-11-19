@@ -77,6 +77,14 @@ export class ClubContentService {
   }
 
   /** Info en cours du club principal du joueur (la plus récente) ; enregistre l'affichage. */
+  /** Nombre de joueurs dont ce club est le club principal (ceux qui verront l'info). */
+  async announcementAudience(clubId: string) {
+    const players = await this.prisma.user.count({
+      where: { role: 'PLAYER', favoriteClubId: clubId, anonymizedAt: null },
+    });
+    return { players };
+  }
+
   async currentForPlayer(userId: string, now = new Date()) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
