@@ -5,7 +5,7 @@ import { apiGet } from '@/lib/api';
 import { getMe } from '@/lib/session';
 import { logoutAction } from '../login/actions';
 
-type Club = { id: string; name: string };
+type Club = { id: string; name: string; logoUrl: string | null };
 
 const clubItems = (id: string) => [
   { href: `/clubs/${id}`, label: 'Tableau de bord' },
@@ -25,9 +25,11 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   if (!me || (me.role !== 'CLUB_ADMIN' && me.role !== 'SUPER_ADMIN')) redirect('/login');
 
   let groups: NavGroup[];
+  let clubLogo: { url: string; name: string } | null = null;
   if (me.role === 'CLUB_ADMIN') {
     const [club] = await apiGet<Club[]>('/clubs');
     groups = [{ title: club?.name ?? 'Mon club', items: clubItems(me.clubId!) }];
+    if (club?.logoUrl) clubLogo = { url: `/media${club.logoUrl}`, name: club.name };
   } else {
     const clubs = await apiGet<Club[]>('/clubs');
     groups = [
@@ -59,11 +61,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-light.png" alt="GPR – Groupement Padel Référence" />
-          <span>Back-office</span>
-        </div>
+        {clubLogo ? (
+          <div className="brand brand-club">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="club-logo" src={clubLogo.url} alt={`Logo ${clubLogo.name}`} />
+            <span>Back-office GPR</span>
+          </div>
+        ) : (
+          <div className="brand">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-light.png" alt="GPR – Groupement Padel Référence" />
+            <span>Back-office</span>
+          </div>
+        )}
         <Sidebar groups={groups} />
         <div className="sidebar-footer">
           <div className="small">

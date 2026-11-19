@@ -20,7 +20,7 @@ const MAGIC: Record<string, (b: Buffer) => boolean> = {
 };
 
 /** Décode et vérifie un logo (le type déclaré doit correspondre au contenu réel du fichier). */
-function decodeLogo(dataUrl: string): { logo: Buffer; logoMime: string } {
+export function decodeLogo(dataUrl: string): { logo: Buffer; logoMime: string } {
   const [head, b64] = dataUrl.split(',');
   const mime = head.slice(5, head.indexOf(';'));
   const logo = Buffer.from(b64, 'base64');

@@ -1,7 +1,6 @@
 import { ActionForm } from '@/components/action-form';
 import { Badge, Empty, PageHeader } from '@/components/ui';
 import { apiGet } from '@/lib/api';
-import { API_URL } from '@/lib/session';
 import { savePartner } from './actions';
 
 type Partner = {
@@ -54,7 +53,7 @@ export default async function LocalPartnersPage({
                   <td style={{ width: 56 }}>
                     {p.logoUrl ? (
                       <img
-                        src={`${API_URL}${p.logoUrl}`}
+                        src={`/media${p.logoUrl}`}
                         alt=""
                         width={44}
                         height={44}

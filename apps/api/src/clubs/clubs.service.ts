@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { decodeLogo } from '../club-content/club-content.service';
 import { Role } from '@prisma/client';
 import type { ClubSettings } from '@gpr/core';
 import type { AuthUser } from '../auth/auth.types';
@@ -11,7 +12,17 @@ const PUBLIC_FIELDS = {
   slug: true,
   city: true,
   offPeakBonusEnabled: true,
+  logoUpdatedAt: true,
 } as const;
+
+/** Remplace la date de mise à jour du logo par son adresse (null s'il n'y a pas de logo). */
+function withLogo<T extends { id: string; logoUpdatedAt: Date | null }>(c: T) {
+  const { logoUpdatedAt, ...rest } = c;
+  return {
+    ...rest,
+    logoUrl: logoUpdatedAt ? `/clubs/${c.id}/logo?v=${logoUpdatedAt.getTime()}` : null,
+  };
+}
 
 @Injectable()
 export class ClubsService {
@@ -21,7 +32,11 @@ export class ClubsService {
   ) {}
 
   /** Liste filtrée selon le rôle : un admin club ne voit que son club. */
-  list(user: AuthUser) {
+  async list(user: AuthUser) {
+    return (await this.listRaw(user)).map(withLogo);
+  }
+
+  private listRaw(user: AuthUser) {
     switch (user.role) {
       case Role.SUPER_ADMIN:
         return this.prisma.club.findMany({
@@ -67,7 +82,7 @@ export class ClubsService {
       },
     });
     if (!club) throw new NotFoundException('Club introuvable');
-    return club;
+    return withLogo(club);
   }
 
   async updateSettings(clubId: string, settings: ClubSettings, user: AuthUser) {
@@ -96,5 +111,33 @@ export class ClubsService {
       );
       return after;
     });
+  }
+
+  async setLogo(clubId: string, logo: string | null, user: AuthUser) {
+    const data = logo
+      ? { ...decodeLogo(logo), logoUpdatedAt: new Date() }
+      : { logo: null, logoMime: null, logoUpdatedAt: null };
+    const club = await this.prisma.club.update({
+      where: { id: clubId },
+      data,
+      select: PUBLIC_FIELDS,
+    });
+    await this.audit.log({
+      actor: { id: user.id, role: user.role },
+      action: logo ? 'club.logo.update' : 'club.logo.delete',
+      entityType: 'Club',
+      entityId: clubId,
+      clubId,
+    });
+    return withLogo(club);
+  }
+
+  async logo(clubId: string) {
+    const c = await this.prisma.club.findUnique({
+      where: { id: clubId },
+      select: { logo: true, logoMime: true },
+    });
+    if (!c?.logo || !c.logoMime) throw new NotFoundException('Logo introuvable');
+    return { logo: c.logo, logoMime: c.logoMime };
   }
 }

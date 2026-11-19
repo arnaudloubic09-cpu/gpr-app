@@ -21,6 +21,8 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3001 HOSTNAME=0.0.0.0
 WORKDIR /app
 COPY --from=build --chown=node:node /repo/apps/admin/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/admin/.next/static ./apps/admin/.next/static
+# Images (logo GPR) : non incluses automatiquement dans la sortie « standalone » de Next.js
+COPY --from=build --chown=node:node /repo/apps/admin/public ./apps/admin/public
 USER node
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \

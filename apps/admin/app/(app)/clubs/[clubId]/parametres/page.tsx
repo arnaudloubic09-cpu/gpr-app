@@ -1,13 +1,14 @@
 import { ActionForm } from '@/components/action-form';
 import { PageHeader } from '@/components/ui';
 import { apiGet } from '@/lib/api';
-import { saveSettings } from './actions';
+import { saveLogo, saveSettings } from './actions';
 
 type Club = {
   id: string;
   name: string;
   offPeakBonusEnabled: boolean;
   counterAutoValidate: boolean;
+  logoUrl: string | null;
 };
 
 export default async function SettingsPage({ params }: { params: Promise<{ clubId: string }> }) {
@@ -16,6 +17,31 @@ export default async function SettingsPage({ params }: { params: Promise<{ clubI
   return (
     <>
       <PageHeader title="Paramètres du club" subtitle={club.name} />
+      <ActionForm
+        action={saveLogo.bind(null, clubId)}
+        submitLabel="Enregistrer le logo"
+        successMessage="Logo enregistré."
+        className="card"
+      >
+        <h2>Logo du club</h2>
+        <p className="muted">
+          Affiché en haut à gauche de votre back-office. Format PNG, JPEG ou WebP, 300 Ko maximum ;
+          un logo sur fond transparent (PNG) rend le mieux.
+        </p>
+        {club.logoUrl ? (
+          <div className="logo-preview">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/media${club.logoUrl}`} alt={`Logo ${club.name}`} />
+          </div>
+        ) : null}
+        <label htmlFor="logo">{club.logoUrl ? 'Remplacer le logo' : 'Choisir un logo'}</label>
+        <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" />
+        {club.logoUrl ? (
+          <label className="checkbox">
+            <input type="checkbox" name="removeLogo" /> Supprimer le logo
+          </label>
+        ) : null}
+      </ActionForm>
       <ActionForm
         action={saveSettings.bind(null, clubId)}
         submitLabel="Enregistrer"

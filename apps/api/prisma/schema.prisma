@@ -192,6 +192,10 @@ model Club {
   localPartners       LocalPartner[]
   /// Comptoir : validation immédiate du coupon dès le scan (sans clic de confirmation)
   counterAutoValidate Boolean  @default(false)
+  /// Logo du club (PNG, JPEG ou WebP, 300 Ko max.)
+  logo                Bytes?
+  logoMime            String?
+  logoUpdatedAt       DateTime?
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

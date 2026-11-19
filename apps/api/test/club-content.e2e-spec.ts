@@ -233,4 +233,24 @@ describe('Info du moment et partenaires locaux (intégration)', () => {
       );
     });
   });
+
+  describe('logo du club', () => {
+    it('l’admin dépose le logo de son club, visible publiquement ; pas celui d’un autre club', async () => {
+      const h = await as(admin);
+      const res = await http().put(`/clubs/${club.id}/logo`).set(h).send({ logo: PNG }).expect(200);
+      expect(res.body.logoUrl).toMatch(new RegExp(`^/clubs/${club.id}/logo\\?v=`));
+      const [mine] = (await http().get('/clubs').set(h).expect(200)).body;
+      expect(mine.logoUrl).toBe(res.body.logoUrl);
+      const img = await http().get(`/clubs/${club.id}/logo`).expect(200);
+      expect(img.headers['content-type']).toBe('image/png');
+      await http().put(`/clubs/${other.id}/logo`).set(h).send({ logo: PNG }).expect(403);
+      await http()
+        .put(`/clubs/${club.id}/logo`)
+        .set(h)
+        .send({ logo: 'data:image/png;base64,' + Buffer.from('pas une image').toString('base64') })
+        .expect(400);
+      await http().put(`/clubs/${club.id}/logo`).set(h).send({ logo: null }).expect(200);
+      await http().get(`/clubs/${club.id}/logo`).expect(404);
+    });
+  });
 });

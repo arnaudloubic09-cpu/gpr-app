@@ -46,3 +46,7 @@ export const LOCAL_PARTNER_ACTIVITY_DAYS = 30;
 export function mapsUrl(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
+
+/** Logo du club (affiché en haut à gauche de son back-office). null = supprimé. */
+export const clubLogoInputSchema = z.object({ logo: logoDataUrlSchema.nullable() });
+export type ClubLogoInput = z.infer<typeof clubLogoInputSchema>;
