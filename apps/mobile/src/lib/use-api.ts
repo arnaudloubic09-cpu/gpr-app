@@ -1,8 +1,9 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { AppState } from 'react-native';
 import { api, ApiError } from './api';
 
-/** Charge une ressource de l'API à chaque affichage de l'écran (données toujours à jour). */
+/** Charge une ressource de l'API à chaque affichage de l'écran et à chaque retour dans l'app. */
 export function useApi<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,9 +22,15 @@ export function useApi<T>(path: string | null) {
     }
   }, [path]);
 
+  // Recharge à chaque affichage de l'écran, et quand le joueur revient dans l'app
+  // (l'app était restée ouverte en arrière-plan : infos du moment, solde… toujours à jour).
   useFocusEffect(
     useCallback(() => {
       void reload();
+      const sub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') void reload();
+      });
+      return () => sub.remove();
     }, [reload]),
   );
 
