@@ -56,3 +56,42 @@ export const PERIODS = [
   { value: '90d', label: '90 jours' },
   { value: '365d', label: '12 mois' },
 ];
+
+/** Fuseau des clubs : les champs « date et heure » du back-office sont saisis à l'heure de Paris. */
+const CLUB_TZ = 'Europe/Paris';
+const tzParts = (d: Date) => {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: CLUB_TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(d)
+      .map((x) => [x.type, x.value]),
+  );
+  return p as Record<string, string>;
+};
+
+/** Date → valeur d'un champ datetime-local, à l'heure de Paris (quel que soit le fuseau du serveur). */
+export function toParisInput(d: Date): string {
+  const p = tzParts(d);
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+}
+
+/** Valeur d'un champ datetime-local saisie à l'heure de Paris → date ISO (UTC). */
+export function fromParisInput(local: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(local);
+  if (!m) return '';
+  const wall = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  const offsetAt = (t: number) => {
+    const p = tzParts(new Date(t));
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - t;
+  };
+  let t = wall - offsetAt(wall);
+  t = wall - offsetAt(t);
+  return new Date(t).toISOString();
+}

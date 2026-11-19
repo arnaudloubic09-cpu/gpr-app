@@ -2,7 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { ActionForm } from '@/components/action-form';
 import { Badge, Empty, PageHeader } from '@/components/ui';
 import { apiGet, apiSend, type ActionResult } from '@/lib/api';
-import { dateTime, n } from '@/lib/format';
+import { dateTime, fromParisInput, n, toParisInput } from '@/lib/format';
 
 type Announcement = {
   id: string;
@@ -14,16 +14,13 @@ type Announcement = {
   stats: { players: number; views: number };
 };
 
-const toLocal = (d: Date) =>
-  new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-
 async function save(clubId: string, id: string | null, _prev: ActionResult | null, form: FormData) {
   'use server';
   const body = {
     title: String(form.get('title') ?? ''),
     body: String(form.get('body') ?? ''),
-    startsAt: new Date(String(form.get('startsAt'))).toISOString(),
-    endsAt: new Date(String(form.get('endsAt'))).toISOString(),
+    startsAt: fromParisInput(String(form.get('startsAt'))),
+    endsAt: fromParisInput(String(form.get('endsAt'))),
     isActive: form.get('isActive') === 'on',
   };
   const res = id
@@ -136,7 +133,7 @@ export default async function InfoPage({
               name="startsAt"
               type="datetime-local"
               required
-              defaultValue={toLocal(editing ? new Date(editing.startsAt) : now)}
+              defaultValue={toParisInput(editing ? new Date(editing.startsAt) : now)}
             />
           </div>
           <div>
@@ -146,7 +143,7 @@ export default async function InfoPage({
               name="endsAt"
               type="datetime-local"
               required
-              defaultValue={toLocal(
+              defaultValue={toParisInput(
                 editing ? new Date(editing.endsAt) : new Date(now.getTime() + 7 * 86_400_000),
               )}
             />
