@@ -55,7 +55,7 @@ export default function OnboardingScreen() {
         <Input label="Nom" value={lastName} onChangeText={setLastName} autoComplete="family-name" />
         <Text style={styles.label}>Votre club principal</Text>
         <Text style={[styles.muted, { marginBottom: space(2) }]}>
-          Vos points GPR sont valables dans tous les clubs du groupement.
+          Vos points GPR s’utilisent dans le club où vous les avez gagnés.
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space(2) }}>
           {clubs.data?.map((c) => (

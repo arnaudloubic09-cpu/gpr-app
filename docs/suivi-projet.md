@@ -44,6 +44,8 @@ La checklist technique détaillée est dans `mise-en-production.md`, section 8.
 ## Décisions prises (résumé)
 
 - Points : 10 points GPR par 30 min, au prorata, heures creuses ×1,5 (lun.–ven., avant 12 h et 14 h–17 h) si le club l'active, pas de plafond, expiration à 12 mois.
+- **Points utilisables uniquement dans le club où ils ont été gagnés** (un solde par club, décision du 20/11/2026) ; le niveau (Bronze → Platine) reste calculé sur tous les clubs.
+- Défis : les défis des clubs rapportent des points (utilisables dans ce club) ; les défis du GPR rapportent un badge, sans points.
 - Pas de rétroactivité : seules les parties jouées après la liaison du compte comptent.
 - Anti-abus : **1 h 30 de jeu crédité maximum par jour et par joueur** (tous clubs), parties simultanées comptées une fois ;
   si le club remplace un joueur dans la réservation, les points suivent (retrait / crédit).

@@ -199,22 +199,29 @@ export function ChallengeForm({
         defaultValue={initial?.description}
       />
       <div className="form-grid">
-        <div>
-          <label htmlFor="rewardGpr">Récompense : points GPR</label>
-          <input
-            id="rewardGpr"
-            name="rewardGpr"
-            type="number"
-            min={1}
-            defaultValue={initial?.rewardGpr ?? ''}
-          />
-          {scope === 'club' ? (
+        {scope === 'club' ? (
+          <div>
+            <label htmlFor="rewardGpr">Récompense : points</label>
+            <input
+              id="rewardGpr"
+              name="rewardGpr"
+              type="number"
+              min={1}
+              defaultValue={initial?.rewardGpr ?? ''}
+            />
             <div className="hint">
-              Maximum fixé par le GPR (200 par défaut) : ces points sont valables dans tout le
-              groupement.
+              Points utilisables dans votre club uniquement. Maximum fixé par le GPR (200 par
+              défaut).
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          <div>
+            <label>Récompense</label>
+            <p className="hint" style={{ marginTop: 6 }}>
+              Les défis du GPR rapportent un badge (les points sont propres à chaque club).
+            </p>
+          </div>
+        )}
         <div>
           <label htmlFor="rewardBadgeId">Récompense : badge</label>
           <select
@@ -239,7 +246,15 @@ export function ChallengeForm({
   );
 }
 
-export function ChallengeTable({ rows, editBase }: { rows: ChallengeRow[]; editBase: string }) {
+export function ChallengeTable({
+  rows,
+  editBase,
+  scope = 'club',
+}: {
+  rows: ChallengeRow[];
+  editBase: string;
+  scope?: 'club' | 'network';
+}) {
   if (!rows.length) return <p className="muted empty">Aucun défi pour le moment.</p>;
   return (
     <table>
@@ -264,7 +279,7 @@ export function ChallengeTable({ rows, editBase }: { rows: ChallengeRow[]; editB
             <td className="small">{PERIODS[r.period]}</td>
             <td className="small">
               {[
-                r.rewardGpr ? `+${r.rewardGpr} points GPR` : null,
+                r.rewardGpr && scope === 'club' ? `+${r.rewardGpr} points` : null,
                 r.rewardBadge ? `Badge ${r.rewardBadge.name}` : null,
               ]
                 .filter(Boolean)

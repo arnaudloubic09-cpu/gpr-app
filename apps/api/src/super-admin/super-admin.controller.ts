@@ -18,8 +18,8 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
 import {
-  AdjustmentInput,
-  adjustmentSchema,
+  superAdjustmentSchema,
+  SuperAdjustmentInput,
   AdminUserInput,
   adminUserInputSchema,
   ClubInput,
@@ -335,9 +335,10 @@ export class SuperAdminController {
   @Post('players/:userId/adjustments')
   adjustPlayer(
     @Param('userId', ParseUUIDPipe) userId: string,
-    @Body(new ZodValidationPipe(adjustmentSchema)) body: AdjustmentInput,
+    @Body(new ZodValidationPipe(superAdjustmentSchema)) body: SuperAdjustmentInput,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.players.adjust(userId, null, body, user);
+    const { clubId, ...input } = body;
+    return this.players.adjust(userId, null, clubId, input, user);
   }
 }

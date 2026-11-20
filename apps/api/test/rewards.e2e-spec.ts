@@ -32,8 +32,12 @@ describe('Catalogue, échange de points et coupons (intégration)', () => {
   let player: User;
   let auth: { Authorization: string };
 
-  /** Crédite des points GPR déjà validés (gain d'il y a 3 jours). */
-  async function credit(user: User, amount: number, opts: { pending?: boolean } = {}) {
+  /** Crédite des points déjà validés (gain d'il y a 3 jours), dans le club du test par défaut. */
+  async function credit(
+    user: User,
+    amount: number,
+    opts: { pending?: boolean; clubId?: string } = {},
+  ) {
     const earnedAt = new Date(Date.now() - 3 * 86_400_000);
     await prisma.ledgerEntry.create({
       data: {
@@ -43,6 +47,7 @@ describe('Catalogue, échange de points et coupons (intégration)', () => {
         sourceType: 'BOOKING',
         sourceId: randomUUID(),
         idempotencyKey: `test:${randomUUID()}`,
+        clubId: opts.clubId ?? club.id,
         earnedAt,
         availableAt: opts.pending ? new Date(Date.now() + 3600_000) : earnedAt,
         expiresAt: addMonths(earnedAt, 12),
@@ -164,10 +169,16 @@ describe('Catalogue, échange de points et coupons (intégration)', () => {
       await redeem(r.id).expect(201);
     });
 
-    it('les points gagnés dans un club s’échangent dans un autre club du groupement', async () => {
-      await credit(player, 100); // crédit sans club = gagné ailleurs
+    it('les points ne sont utilisables que dans le club où ils ont été gagnés', async () => {
       const other = await createClub(prisma, 'Autre club');
-      const r = await prisma.reward.create({
+      await credit(player, 100, { clubId: other.id });
+      // Récompense de « club » : les points gagnés dans l'autre club ne comptent pas
+      const here = await reward({ costGpr: 50 });
+      const res = await redeem(here.id).expect(422);
+      expect(res.body.code).toBe('INSUFFICIENT_BALANCE');
+      expect(res.body.message).toContain(club.name);
+      // Dans le club où ils ont été gagnés : OK
+      const there = await prisma.reward.create({
         data: {
           clubId: other.id,
           category: 'SNACK',
@@ -176,7 +187,28 @@ describe('Catalogue, échange de points et coupons (intégration)', () => {
           costGpr: 100,
         },
       });
-      await redeem(r.id).expect(201);
+      await redeem(there.id).expect(201);
+      const balance = await ledger.balance(player.id);
+      // Plus aucun point dans ce club : il n'apparaît plus dans le solde
+      expect(balance.available).toBe(0);
+      expect(balance.clubs.find((c) => c.club.id === other.id)).toBeUndefined();
+    });
+
+    it('solde affiché club par club', async () => {
+      const other = await createClub(prisma, 'Autre club');
+      await credit(player, 120);
+      await credit(player, 30, { clubId: other.id });
+      const res = await http().get('/me/balance').set(auth).expect(200);
+      expect(res.body.available).toBe(150);
+      expect(
+        res.body.clubs.map((c: { club: { id: string }; available: number }) => [
+          c.club.id,
+          c.available,
+        ]),
+      ).toEqual([
+        [club.id, 120],
+        [other.id, 30],
+      ]);
     });
 
     it('un compte admin ne peut pas échanger de points', async () => {

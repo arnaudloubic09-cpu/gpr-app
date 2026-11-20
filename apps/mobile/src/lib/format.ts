@@ -61,3 +61,9 @@ export const BADGE_ICONS: Record<string, string> = {
   tennisball: 'tennisball',
   people: 'people',
 };
+
+/** Points utilisables dans un club (les points ne servent que dans le club où ils ont été gagnés). */
+export const clubAvailable = (
+  balance: { clubs: { club: { id: string }; available: number }[] } | null | undefined,
+  clubId: string | null | undefined,
+) => balance?.clubs.find((c) => c.club.id === clubId)?.available ?? 0;

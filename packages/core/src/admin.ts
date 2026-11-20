@@ -39,6 +39,19 @@ export const adjustmentSchema = z
   .strict();
 export type AdjustmentInput = z.infer<typeof adjustmentSchema>;
 
+/** Ajustement par le super admin : il choisit le club dont le solde est ajusté. */
+export const superAdjustmentSchema = z
+  .object({
+    amount: z
+      .number()
+      .int()
+      .refine((n) => n !== 0, 'Montant non nul requis'),
+    reason: z.string().trim().min(5, 'Motif obligatoire (5 caractères minimum)').max(300),
+    clubId: z.string().uuid('Choisissez le club'),
+  })
+  .strict();
+export type SuperAdjustmentInput = z.infer<typeof superAdjustmentSchema>;
+
 const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 /** Nouvelle version des règles GPR (super admin). */

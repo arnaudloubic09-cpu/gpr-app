@@ -3,6 +3,9 @@ import type { LedgerType } from './enums';
 /**
  * Lecture du grand livre (ledger) — fonctions pures.
  *
+ * Les points ne sont utilisables que dans le club où ils ont été gagnés : chaque club forme
+ * un solde séparé (voir `splitByClub`).
+ *
  * Le solde n'est jamais stocké : il est recalculé à partir des écritures immuables.
  *  - « en attente » : écriture dont availableAt est dans le futur (crédit à H+2) ;
  *  - expiration FIFO : chaque gain forme un « lot » qui expire à expiresAt ;
@@ -24,6 +27,8 @@ export interface LedgerEntryLike {
   reversesEntryId?: string | null;
   /** Pour EXPIRE : l'identifiant du lot expiré. */
   sourceId?: string | null;
+  /** Club où les points ont été gagnés (ou dépensés). */
+  clubId?: string | null;
 }
 
 export interface Lot {
@@ -180,6 +185,72 @@ export function computeBalance(
     if (lot.expiresAt && lot.expiresAt <= horizon) expiringSoon += lot.remaining;
   }
   return { available: available - deficit, pending, expiringSoon };
+}
+
+// ───────────── Soldes par club ─────────────
+
+/**
+ * Club d'une écriture. Les annulations, remboursements et expirations anciens, écrits sans club,
+ * héritent du club de l'écriture qu'ils visent.
+ */
+export function resolveClubIds<T extends LedgerEntryLike>(
+  entries: T[],
+): Map<string, string | null> {
+  const byId = new Map(entries.map((e) => [e.id, e]));
+  const out = new Map<string, string | null>();
+  const resolve = (e: T, depth = 0): string | null => {
+    if (out.has(e.id)) return out.get(e.id)!;
+    let club = e.clubId ?? null;
+    if (!club && depth < 5) {
+      const refId =
+        e.type === 'EXPIRE'
+          ? e.sourceId
+          : e.type === 'REVERSAL' || e.type === 'REFUND'
+            ? e.reversesEntryId
+            : null;
+      const ref = refId ? byId.get(refId) : undefined;
+      if (ref) club = resolve(ref, depth + 1);
+    }
+    out.set(e.id, club);
+    return club;
+  };
+  for (const e of entries) resolve(e);
+  return out;
+}
+
+/** Sépare le grand livre par club (clé null : anciennes écritures sans club, non utilisables). */
+export function splitByClub<T extends LedgerEntryLike>(entries: T[]): Map<string | null, T[]> {
+  const clubs = resolveClubIds(entries);
+  const out = new Map<string | null, T[]>();
+  for (const e of entries) {
+    const k = clubs.get(e.id) ?? null;
+    if (!out.has(k)) out.set(k, []);
+    out.get(k)!.push(e);
+  }
+  return out;
+}
+
+export interface ClubBalance extends Balance {
+  clubId: string;
+}
+
+/** Solde de chaque club où le joueur a des points (écritures sans club ignorées). */
+export function computeClubBalances(
+  entries: LedgerEntryLike[],
+  now: Date,
+  expiringWithinDays = 30,
+): ClubBalance[] {
+  const out: ClubBalance[] = [];
+  for (const [clubId, list] of splitByClub(entries)) {
+    if (!clubId) continue;
+    out.push({ clubId, ...computeBalance(list, now, expiringWithinDays) });
+  }
+  return out;
+}
+
+/** Solde utilisable dans un club donné. */
+export function computeClubBalance(entries: LedgerEntryLike[], clubId: string, now: Date): Balance {
+  return computeBalance(splitByClub(entries).get(clubId) ?? [], now);
 }
 
 /** Ajoute des mois calendaires (utilisé pour la date d'expiration des gains). */

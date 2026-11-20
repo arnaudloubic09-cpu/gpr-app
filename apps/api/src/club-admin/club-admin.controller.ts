@@ -178,6 +178,6 @@ export class ClubAdminController {
     @Body(new ZodValidationPipe(adjustmentSchema)) body: AdjustmentInput,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.players.adjust(userId, clubId, body, user);
+    return this.players.adjust(userId, clubId, clubId, body, user);
   }
 }

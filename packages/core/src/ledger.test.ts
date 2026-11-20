@@ -3,6 +3,8 @@ import {
   addMonths,
   allocateLots,
   computeBalance,
+  computeClubBalance,
+  computeClubBalances,
   computeExpirations,
   type LedgerEntryLike,
 } from './ledger';
@@ -156,5 +158,56 @@ describe('remboursement d’un coupon (REFUND)', () => {
     };
     const due = computeExpirations([lot, redeem, refund], d('2026-11-06T00:00:00Z'));
     expect(due).toEqual([{ lotEntryId: lot.id, amount: 50, sequence: 0 }]);
+  });
+});
+
+describe('soldes par club', () => {
+  const at = (h: number) => new Date(Date.UTC(2026, 0, 1, h));
+  const e = (
+    id: string,
+    type: LedgerEntryLike['type'],
+    amount: number,
+    clubId: string | null,
+    extra: Partial<LedgerEntryLike> = {},
+  ): LedgerEntryLike => ({
+    id,
+    type,
+    amount,
+    clubId,
+    earnedAt: at(1),
+    availableAt: at(1),
+    expiresAt: null,
+    createdAt: at(Number(id.replace(/\D/g, '')) || 1),
+    ...extra,
+  });
+
+  it('les points restent dans le club où ils ont été gagnés', () => {
+    const entries = [
+      e('a1', 'EARN', 100, 'TLS'),
+      e('a2', 'EARN', 40, 'BDX'),
+      e('a3', 'REDEEM', -60, 'TLS'),
+    ];
+    const balances = computeClubBalances(entries, at(10));
+    expect(balances.find((b) => b.clubId === 'TLS')?.available).toBe(40);
+    expect(balances.find((b) => b.clubId === 'BDX')?.available).toBe(40);
+    expect(computeClubBalance(entries, 'BDX', at(10)).available).toBe(40);
+  });
+
+  it('une expiration ou une annulation sans club hérite du club du lot visé', () => {
+    const entries = [
+      e('a1', 'EARN', 100, 'TLS'),
+      e('a2', 'EARN', 50, 'BDX'),
+      e('a3', 'REVERSAL', -50, null, { reversesEntryId: 'a2' }),
+      e('a4', 'EXPIRE', -30, null, { sourceId: 'a1' }),
+    ];
+    expect(computeClubBalance(entries, 'TLS', at(10)).available).toBe(70);
+    expect(computeClubBalance(entries, 'BDX', at(10)).available).toBe(0);
+  });
+
+  it('les anciennes écritures sans club ne sont utilisables nulle part', () => {
+    const entries = [e('a1', 'ADJUST', 500, null), e('a2', 'EARN', 30, 'TLS')];
+    expect(computeClubBalances(entries, at(10))).toEqual([
+      { clubId: 'TLS', available: 30, pending: 0, expiringSoon: 0 },
+    ]);
   });
 });

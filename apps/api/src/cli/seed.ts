@@ -257,6 +257,8 @@ async function main() {
           condition: { type: 'COUNT', target: 3 },
           period: 'WEEK',
           startsAt,
+          // Défi de club : les points sont crédités dans ce club
+          clubId: clubIds[0],
           rewardGpr: 50,
         },
         {
@@ -275,6 +277,7 @@ async function main() {
           condition: { type: 'MATCH', weekday: 1, before: '12:00', offPeak: true },
           period: 'WEEK',
           startsAt,
+          clubId: clubIds[1],
           rewardGpr: 20,
         },
         {

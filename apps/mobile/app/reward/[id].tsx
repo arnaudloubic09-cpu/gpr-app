@@ -6,7 +6,7 @@ import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Button, Card, ErrorText, Loading, Screen, styles } from '../../src/components/ui';
 import { api, ApiError } from '../../src/lib/api';
-import { CATEGORY, formatDate, points, rewardValue } from '../../src/lib/format';
+import { CATEGORY, clubAvailable, formatDate, points, rewardValue } from '../../src/lib/format';
 import { colors, space } from '../../src/lib/theme';
 import { useApi } from '../../src/lib/use-api';
 
@@ -15,6 +15,7 @@ export default function RewardScreen() {
   const router = useRouter();
   const catalog = useApi<RewardView[]>(`/clubs/${clubId}/rewards`);
   const balance = useApi<BalanceView>('/me/balance');
+  const clubs = useApi<{ id: string; name: string }[]>('/clubs');
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +32,9 @@ export default function RewardScreen() {
       </Screen>
     );
 
-  const available = balance.data?.available ?? 0;
+  // Seuls les points gagnés dans le club de la récompense sont utilisables
+  const available = clubAvailable(balance.data, reward.clubId);
+  const clubName = clubs.data?.find((c) => c.id === reward.clubId)?.name ?? 'ce club';
   const missing = reward.costGpr - available;
   const cat = CATEGORY[reward.category];
 
@@ -98,12 +101,14 @@ export default function RewardScreen() {
         </Text>
       ) : missing > 0 ? (
         <Text style={[styles.muted, { textAlign: 'center' }]}>
-          Il vous manque {points(missing)}. Encore quelques parties !
+          Il vous manque {points(missing)} à {clubName}. Vos points s’utilisent dans le club où vous
+          les avez gagnés : encore quelques parties ici !
         </Text>
       ) : confirming ? (
         <View>
           <Text style={[styles.muted, { textAlign: 'center' }]}>
-            {points(reward.costGpr)} seront déduits de votre solde ({points(available)}).
+            {points(reward.costGpr)} seront déduits de votre solde à {clubName} ({points(available)}
+            ).
           </Text>
           <Button
             label="Confirmer l’échange"

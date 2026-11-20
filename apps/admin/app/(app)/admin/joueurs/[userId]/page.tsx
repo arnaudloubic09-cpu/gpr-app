@@ -10,11 +10,12 @@ import { grantVip } from '../../vip/actions';
 
 export default async function AdminPlayerPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
-  const [player, memberships] = await Promise.all([
+  const [player, memberships, clubs] = await Promise.all([
     apiGet<PlayerDetailData>(`/admin/players/${userId}`),
     apiGet<
       { id: string; source: string; startsAt: string; endsAt: string; reason: string | null }[]
     >(`/admin/vip/players/${userId}`),
+    apiGet<{ id: string; name: string }[]>('/clubs'),
   ]);
   const now = new Date();
   const SOURCES: Record<string, string> = {
@@ -39,7 +40,8 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ us
           `/admin/players/${userId}`,
           `/admin/joueurs/${userId}`,
         )}
-        adjustmentHint="Super admin : pas de plafond. L’ajustement n’est rattaché à aucun club."
+        adjustmentHint="Super admin : pas de plafond. Les points ajoutés ne seront utilisables que dans le club choisi."
+        clubChoices={clubs}
       />
       <div className="two-cols">
         <div className="card">

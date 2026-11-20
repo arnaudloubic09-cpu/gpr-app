@@ -100,7 +100,7 @@ describe('Gamification, notifications et RGPD (intégration)', () => {
   describe('défis', () => {
     it('« 3 parties cette semaine » : récompense unique, et seulement pour des parties validées', async () => {
       const c = await challenge({
-        clubId: null,
+        clubId: club.id,
         condition: { type: 'COUNT', target: 3 },
         rewardGpr: 50,
       });
@@ -117,7 +117,8 @@ describe('Gamification, notifications et RGPD (intégration)', () => {
       const rewards = await prisma.ledgerEntry.findMany({
         where: { userId: player.id, type: 'CHALLENGE' },
       });
-      expect(rewards.map((r) => [r.amount, r.sourceId])).toEqual([[50, c.id]]);
+      // Points crédités dans le club du défi
+      expect(rewards.map((r) => [r.amount, r.sourceId, r.clubId])).toEqual([[50, c.id, club.id]]);
       const notifs = await prisma.notification.findMany({
         where: { userId: player.id, type: 'CHALLENGE_COMPLETED' },
       });
@@ -125,7 +126,7 @@ describe('Gamification, notifications et RGPD (intégration)', () => {
     });
 
     it('chaque semaine est un nouveau défi', async () => {
-      await challenge({ clubId: null, condition: { type: 'COUNT', target: 1 }, rewardGpr: 10 });
+      await challenge({ clubId: club.id, condition: { type: 'COUNT', target: 1 }, rewardGpr: 10 });
       await played(player, '2026-11-16T18:00');
       await run('2026-11-17T12:00');
       await played(player, '2026-11-24T18:00');
@@ -133,6 +134,46 @@ describe('Gamification, notifications et RGPD (intégration)', () => {
       expect(
         await prisma.ledgerEntry.count({ where: { userId: player.id, type: 'CHALLENGE' } }),
       ).toBe(2);
+    });
+
+    it('défi du GPR : badge seulement, jamais de points (même un ancien défi paramétré avec des points)', async () => {
+      const badge = await prisma.badge.create({
+        data: { code: `G${Date.now()}`, name: 'Tour des clubs', description: 'test', icon: 'map' },
+      });
+      await challenge({
+        clubId: null,
+        condition: { type: 'COUNT', target: 1 },
+        rewardGpr: 30, // ancien paramétrage : ignoré
+        rewardBadgeId: badge.id,
+      });
+      await played(player, '2026-11-16T18:00');
+      await run('2026-11-17T12:00');
+      expect(
+        await prisma.ledgerEntry.count({ where: { userId: player.id, type: 'CHALLENGE' } }),
+      ).toBe(0);
+      expect(
+        await prisma.playerBadge.count({ where: { userId: player.id, badgeId: badge.id } }),
+      ).toBe(1);
+
+      const sa = await createUser(prisma, Role.SUPER_ADMIN);
+      const body = {
+        name: 'Défi GPR',
+        description: 'Jouer dans 2 clubs',
+        period: 'MONTH',
+        startsAt: '2026-11-01',
+        condition: { type: 'DISTINCT_CLUBS', target: 2 },
+      };
+      const refused = await http()
+        .post('/admin/challenges')
+        .set(await as(sa))
+        .send({ ...body, rewardGpr: 50 })
+        .expect(400);
+      expect(refused.body.message).toContain('badge');
+      await http()
+        .post('/admin/challenges')
+        .set(await as(sa))
+        .send({ ...body, rewardBadgeId: badge.id })
+        .expect(201);
     });
 
     it('défi de club : seules les parties du club comptent ; badge attribué une seule fois', async () => {

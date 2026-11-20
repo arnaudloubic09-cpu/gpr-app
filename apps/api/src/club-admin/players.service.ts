@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { addMonths, AdjustmentInput, computeBalance } from '@gpr/core';
+import { addMonths, AdjustmentInput, computeClubBalance } from '@gpr/core';
 import type { AuthUser } from '../auth/auth.types';
 import { AuditService } from '../common/audit/audit.service';
 import { LedgerService } from '../ledger/ledger.service';
@@ -90,7 +90,8 @@ export class PlayersService {
   async detail(userId: string, clubId: string | null) {
     const user = await this.findInScope(userId, clubId);
     const [balance, entries, coupons, rules] = await Promise.all([
-      this.ledger.balance(userId),
+      // Admin club : le solde dans son club ; super admin : le solde de chaque club
+      clubId ? this.ledger.clubBalance(userId, clubId) : this.ledger.balance(userId),
       this.prisma.ledgerEntry.findMany({
         where: { userId, ...(clubId ? { clubId } : {}) },
         orderBy: [{ earnedAt: 'desc' }, { createdAt: 'desc' }],
@@ -126,8 +127,20 @@ export class PlayersService {
   }
 
   /** Ajustement manuel motivé : nouvelle écriture ADJUST (le ledger reste immuable). */
-  async adjust(userId: string, clubId: string | null, input: AdjustmentInput, actor: AuthUser) {
-    await this.findInScope(userId, clubId);
+  /**
+   * Ajustement dans le solde d'un club (les points sont propres à chaque club).
+   * `scopeClubId` : club de l'admin club (null pour le super admin, qui choisit le club).
+   */
+  async adjust(
+    userId: string,
+    scopeClubId: string | null,
+    clubId: string,
+    input: AdjustmentInput,
+    actor: AuthUser,
+  ) {
+    await this.findInScope(userId, scopeClubId);
+    if (!(await this.prisma.club.findUnique({ where: { id: clubId } })))
+      throw new NotFoundException('Club introuvable');
     const rules = await this.rules.getActive();
     if (actor.role === Role.CLUB_ADMIN && Math.abs(input.amount) > rules.clubAdjustmentMax) {
       throw new ForbiddenException(
@@ -139,13 +152,14 @@ export class PlayersService {
       await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId}::uuid FOR UPDATE`;
       const now = new Date();
       if (input.amount < 0) {
-        const { available } = computeBalance(
+        const { available } = computeClubBalance(
           await tx.ledgerEntry.findMany({ where: { userId } }),
+          clubId,
           now,
         );
         if (available < -input.amount) {
           throw new UnprocessableEntityException(
-            `Retrait impossible : le joueur n'a que ${available} points GPR disponibles`,
+            `Retrait impossible : le joueur n'a que ${available} points disponibles dans ce club`,
           );
         }
       }
@@ -178,6 +192,6 @@ export class PlayersService {
       );
       return created;
     });
-    return { entry, balance: await this.ledger.balance(userId) };
+    return { entry, balance: await this.ledger.clubBalance(userId, clubId) };
   }
 }

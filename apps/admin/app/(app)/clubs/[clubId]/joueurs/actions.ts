@@ -15,6 +15,8 @@ export async function adjustPoints(
   const res = await apiSend(`${apiPlayerPath}/adjustments`, 'POST', {
     amount: Math.abs(amount) * direction,
     reason: String(form.get('reason') ?? ''),
+    // Super admin : club dont le solde est ajusté (les points sont propres à chaque club)
+    ...(form.get('clubId') ? { clubId: String(form.get('clubId')) } : {}),
   });
   if (res.ok) revalidatePath(pagePath);
   return res;

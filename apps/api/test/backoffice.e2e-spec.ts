@@ -315,7 +315,7 @@ describe('Back-office : admin club et super admin (intégration)', () => {
       await http().get(`/clubs/${club.id}/players/${stranger.id}`).set(h).expect(404);
 
       const detail = await http().get(`/clubs/${club.id}/players/${player.id}`).set(h).expect(200);
-      expect(detail.body.balance.available).toBe(140); // solde global
+      expect(detail.body.balance.available).toBe(100); // solde utilisable dans SON club
       expect(detail.body.transactions.map((t: { amount: number }) => t.amount)).toEqual([100]); // historique du club
       expect(detail.body.phone).toBeUndefined();
     });
@@ -349,8 +349,14 @@ describe('Back-office : admin club et super admin (intégration)', () => {
       const sa = await http()
         .post(`/admin/players/${player.id}/adjustments`)
         .set(await as(superAdmin))
-        .send({ amount: 500, reason: 'Compensation panne' })
+        .send({ amount: 500, reason: 'Compensation panne', clubId: club.id })
         .expect(201);
+      // Le super admin doit préciser le club dont le solde est ajusté
+      await http()
+        .post(`/admin/players/${player.id}/adjustments`)
+        .set(await as(superAdmin))
+        .send({ amount: 500, reason: 'Compensation panne' })
+        .expect(400);
       expect(sa.body.balance.available).toBe(650);
 
       const adj = await prisma.ledgerEntry.findFirstOrThrow({
@@ -396,6 +402,7 @@ describe('Back-office : admin club et super admin (intégration)', () => {
 
     it('groupement : flux de points par club (réservé au super admin)', async () => {
       await credit(player, 300, club.id);
+      await credit(player, 100, otherClub.id);
       const r = await prisma.reward.create({
         data: {
           clubId: otherClub.id,
@@ -420,7 +427,7 @@ describe('Back-office : admin club et super admin (intégration)', () => {
         (c: { club: { id: string } }) => c.club.id === otherClub.id,
       );
       expect(alpha).toMatchObject({ distributed: 300, redeemed: 0, net: 300 });
-      expect(beta).toMatchObject({ distributed: 0, redeemed: 100, net: -100 });
+      expect(beta).toMatchObject({ distributed: 100, redeemed: 100, net: 0 });
       await http()
         .get('/admin/stats')
         .set(await as(admin))

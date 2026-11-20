@@ -13,7 +13,13 @@ export type PlayerDetailData = {
   lastLoginAt: string | null;
   favoriteClub: { name: string } | null;
   externalLinks: { provider: string; linkedAt: string }[];
-  balance: { available: number; pending: number; expiringSoon: number };
+  balance: {
+    available: number;
+    pending: number;
+    expiringSoon: number;
+    /** Super admin : solde de chaque club. */
+    clubs?: { club: { id: string; name: string }; available: number; pending: number }[];
+  };
   transactions: {
     id: string;
     type: string;
@@ -39,16 +45,26 @@ export function PlayerDetail({
   scopeLabel,
   adjustAction,
   adjustmentHint,
+  clubChoices,
 }: {
   player: PlayerDetailData;
   scopeLabel: string;
   adjustAction: (prev: ActionResult | null, form: FormData) => Promise<ActionResult | null>;
   adjustmentHint: string;
+  /** Super admin : liste des clubs pour choisir le solde ajusté. */
+  clubChoices?: { id: string; name: string }[];
 }) {
   return (
     <>
       <div className="grid">
-        <Kpi label="Solde disponible (tous clubs)" value={n(player.balance.available)} />
+        <Kpi
+          label={
+            player.balance.clubs
+              ? 'Solde disponible (total des clubs)'
+              : 'Solde utilisable dans votre club'
+          }
+          value={n(player.balance.available)}
+        />
         <Kpi label="En attente" value={n(player.balance.pending)} />
         <Kpi
           label="Expirent sous 30 jours"
@@ -56,6 +72,36 @@ export function PlayerDetail({
           tone={player.balance.expiringSoon ? 'warn' : undefined}
         />
       </div>
+      {player.balance.clubs ? (
+        <div className="card table-wrap">
+          <h2>Solde par club</h2>
+          <p className="muted small">
+            Les points ne sont utilisables que dans le club où ils ont été gagnés.
+          </p>
+          {player.balance.clubs.length === 0 ? (
+            <Empty>Aucun point pour le moment.</Empty>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Club</th>
+                  <th className="num">Disponibles</th>
+                  <th className="num">En attente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {player.balance.clubs.map((c) => (
+                  <tr key={c.club.id}>
+                    <td>{c.club.name}</td>
+                    <td className="num">{n(c.available)}</td>
+                    <td className="num">{n(c.pending)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ) : null}
       <div className="two-cols">
         <div className="card">
           <h2>Profil</h2>
@@ -108,6 +154,21 @@ export function PlayerDetail({
             successMessage="Ajustement enregistré."
             confirm="Confirmer cet ajustement de points GPR ?"
           >
+            {clubChoices ? (
+              <>
+                <label htmlFor="adjustClub">Club dont le solde est ajusté</label>
+                <select id="adjustClub" name="clubId" required defaultValue="">
+                  <option value="" disabled>
+                    Choisir un club…
+                  </option>
+                  {clubChoices.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
             <div className="form-grid">
               <div>
                 <label htmlFor="direction">Opération</label>

@@ -19,10 +19,10 @@ export default async function NetworkChallengesPage({
     <>
       <PageHeader
         title="Défis du groupement"
-        subtitle="Comptent les parties jouées dans tous les clubs du groupement."
+        subtitle="Comptent les parties jouées dans tous les clubs du groupement. Récompense : un badge (les points sont propres à chaque club)."
       />
       <div className="card table-wrap">
-        <ChallengeTable rows={rows} editBase="/admin/defis" />
+        <ChallengeTable rows={rows} editBase="/admin/defis" scope="network" />
       </div>
       <h2>
         {editing ? `Modifier « ${editing.name} »` : 'Nouveau défi'}{' '}

@@ -14,7 +14,7 @@ import {
   Title,
 } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
-import { CATEGORY, points, rewardValue } from '../../src/lib/format';
+import { CATEGORY, clubAvailable, points, rewardValue } from '../../src/lib/format';
 import { colors, space } from '../../src/lib/theme';
 import { useApi } from '../../src/lib/use-api';
 
@@ -40,11 +40,20 @@ export default function RewardsScreen() {
   }, [clubId, sorted]);
 
   const rewards = useApi<RewardView[]>(clubId ? `/clubs/${clubId}/rewards` : null);
-  const available = balance.data?.available ?? 0;
+  const available = clubAvailable(balance.data, clubId);
+  const clubName = sorted.find((c) => c.id === clubId)?.name;
 
   return (
     <Screen>
-      <Title subtitle={`Vous avez ${points(available)}`}>Récompenses</Title>
+      <Title
+        subtitle={
+          clubName
+            ? `${points(available)} à utiliser à ${clubName}`
+            : 'Vos points s’utilisent dans le club où vous les avez gagnés'
+        }
+      >
+        Récompenses
+      </Title>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

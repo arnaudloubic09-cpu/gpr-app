@@ -99,10 +99,24 @@ export interface CouponView {
   club: { id: string; name: string };
 }
 
+export interface ClubBalanceView {
+  club: { id: string; name: string };
+  /** Club principal du joueur (affiché en premier). */
+  favorite: boolean;
+  available: number;
+  pending: number;
+  expiringSoon: number;
+}
+
+/**
+ * Solde du joueur. Les points ne sont utilisables que dans le club où ils ont été gagnés :
+ * `clubs` donne le solde de chaque club ; les totaux sont indicatifs.
+ */
 export interface BalanceView {
   available: number;
   pending: number;
   expiringSoon: number;
+  clubs: ClubBalanceView[];
 }
 
 export interface TransactionItem {

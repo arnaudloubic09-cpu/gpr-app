@@ -235,7 +235,7 @@ export const challengeInputSchema = z
   })
   .strict()
   .refine((c) => !!c.rewardGpr || !!c.rewardBadgeId, {
-    message: 'Une récompense (points GPR ou badge) est requise',
+    message: 'Une récompense (points ou badge) est requise',
   })
   .refine((c) => !c.endsAt || c.endsAt > c.startsAt, {
     message: 'La fin doit être après le début',

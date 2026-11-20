@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Coupon, Prisma, Reward } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { computeBalance, CouponView, RewardView, validateRewardConfig } from '@gpr/core';
+import { computeClubBalance, CouponView, RewardView, validateRewardConfig } from '@gpr/core';
 import { AnalyticsService } from '../common/analytics/analytics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RulesService } from '../rules/rules.service';
@@ -113,11 +113,16 @@ export class RewardsService {
             throw new UnprocessableEntityException('Cette récompense ne peut pas être échangée');
           }
 
-          const balance = computeBalance(await tx.ledgerEntry.findMany({ where: { userId } }), now);
+          // Seuls les points gagnés dans le club de la récompense sont utilisables
+          const balance = computeClubBalance(
+            await tx.ledgerEntry.findMany({ where: { userId } }),
+            reward.clubId,
+            now,
+          );
           if (balance.available < reward.costGpr) {
             throw new UnprocessableEntityException({
               code: 'INSUFFICIENT_BALANCE',
-              message: `Solde insuffisant : ${balance.available} points GPR disponibles, ${reward.costGpr} nécessaires`,
+              message: `Solde insuffisant à ${reward.club.name} : ${balance.available} points disponibles dans ce club, ${reward.costGpr} nécessaires`,
               available: balance.available,
             });
           }

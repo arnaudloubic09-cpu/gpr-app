@@ -62,16 +62,48 @@ export default function HomeScreen() {
           padding: space(5),
           marginBottom: space(3),
         }}
-        accessibilityLabel={`Solde : ${points(balance.data?.available ?? 0)}`}
+        accessibilityLabel={`Solde : ${(balance.data?.clubs ?? []).map((c) => `${points(c.available)} à ${c.club.name}`).join(', ') || points(0)}`}
       >
         <Text style={{ color: '#fff', fontWeight: '600', opacity: 0.9 }}>
-          Points GPR disponibles{level.data ? ` · Niveau ${level.data.current.label}` : ''}
+          Mes points GPR{level.data ? ` · Niveau ${level.data.current.label}` : ''}
         </Text>
-        <Text style={{ color: '#fff', fontSize: 44, fontWeight: '900', marginVertical: space(1) }}>
-          {balance.data ? balance.data.available.toLocaleString('fr-FR') : '—'}
-        </Text>
-        <Text style={{ color: '#fff', opacity: 0.9 }}>
-          Valables dans tous les clubs du groupement
+        {balance.data && balance.data.clubs.length > 0 ? (
+          <>
+            <Text style={{ color: '#fff', opacity: 0.9, marginTop: space(3) }}>
+              {balance.data.clubs[0].club.name}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 44, fontWeight: '900' }}>
+              {balance.data.clubs[0].available.toLocaleString('fr-FR')}
+            </Text>
+            {balance.data.clubs.slice(1).map((c) => (
+              <View
+                key={c.club.id}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  borderTopWidth: 1,
+                  borderTopColor: 'rgba(255,255,255,0.25)',
+                  paddingVertical: space(2),
+                }}
+              >
+                <Text style={{ color: '#fff', flex: 1 }} numberOfLines={1}>
+                  {c.club.name}
+                </Text>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>
+                  {c.available.toLocaleString('fr-FR')}
+                </Text>
+              </View>
+            ))}
+          </>
+        ) : (
+          <Text
+            style={{ color: '#fff', fontSize: 44, fontWeight: '900', marginVertical: space(1) }}
+          >
+            {balance.data ? '0' : '—'}
+          </Text>
+        )}
+        <Text style={{ color: '#fff', opacity: 0.9, marginTop: space(1) }}>
+          Utilisables dans le club où vous les avez gagnés
         </Text>
       </View>
       <Text

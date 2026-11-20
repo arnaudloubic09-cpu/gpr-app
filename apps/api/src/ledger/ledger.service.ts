@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { LedgerEntry, LedgerType, Prisma } from '@prisma/client';
-import { Balance, computeBalance, computeExpirations } from '@gpr/core';
+import {
+  Balance,
+  BalanceView,
+  computeClubBalance,
+  computeClubBalances,
+  computeExpirations,
+  splitByClub,
+} from '@gpr/core';
 import { PrismaService } from '../prisma/prisma.service';
 
 const TYPE_LABELS: Record<LedgerType, string> = {
@@ -42,8 +49,47 @@ export class LedgerService {
     return tx.ledgerEntry.findMany({ where: { userId } });
   }
 
-  async balance(userId: string, now = new Date()): Promise<Balance> {
-    return computeBalance(await this.entries(userId), now);
+  /** Solde par club (points utilisables uniquement dans le club où ils ont été gagnés). */
+  async balance(userId: string, now = new Date()): Promise<BalanceView> {
+    const [entries, user] = await Promise.all([
+      this.entries(userId),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { favoriteClubId: true } }),
+    ]);
+    const balances = computeClubBalances(entries, now);
+    const clubs = await this.prisma.club.findMany({
+      where: { id: { in: balances.map((b) => b.clubId) } },
+      select: { id: true, name: true },
+    });
+    const views = balances
+      .map(({ clubId, ...b }) => ({
+        club: clubs.find((c) => c.id === clubId) ?? { id: clubId, name: 'Club' },
+        favorite: clubId === user?.favoriteClubId,
+        ...b,
+      }))
+      // On n'affiche pas un club où il ne reste plus rien
+      .filter((v) => v.available !== 0 || v.pending > 0 || v.favorite)
+      .sort(
+        (a, b) =>
+          Number(b.favorite) - Number(a.favorite) ||
+          b.available - a.available ||
+          a.club.name.localeCompare(b.club.name),
+      );
+    return {
+      available: views.reduce((s, v) => s + v.available, 0),
+      pending: views.reduce((s, v) => s + v.pending, 0),
+      expiringSoon: views.reduce((s, v) => s + v.expiringSoon, 0),
+      clubs: views,
+    };
+  }
+
+  /** Solde utilisable dans un club donné. */
+  async clubBalance(
+    userId: string,
+    clubId: string,
+    now = new Date(),
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Balance> {
+    return computeClubBalance(await this.entries(userId, tx), clubId, now);
   }
 
   async transactions(
@@ -94,11 +140,14 @@ export class LedgerService {
     let entries = 0;
     let points = 0;
     for (const { userId } of users) {
-      const due = computeExpirations(await this.entries(userId), now);
+      const due = [...splitByClub(await this.entries(userId))].flatMap(([clubId, list]) =>
+        computeExpirations(list, now).map((d) => ({ ...d, clubId })),
+      );
       if (!due.length) continue;
       const res = await this.prisma.ledgerEntry.createMany({
         data: due.map((d) => ({
           userId,
+          clubId: d.clubId,
           type: 'EXPIRE' as const,
           amount: -d.amount,
           sourceType: 'EXPIRATION' as const,

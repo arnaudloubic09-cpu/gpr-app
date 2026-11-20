@@ -94,7 +94,8 @@ export class ChallengesService {
             period: c.period,
             endsAt: c.endsAt,
             club: c.club,
-            rewardGpr: c.rewardGpr,
+            // Défi du GPR : badge seulement (les points sont propres à chaque club)
+            rewardGpr: c.clubId ? c.rewardGpr : null,
             rewardBadge: c.rewardBadge,
             progress: { value: r.value, target: r.target },
             completed: r.completed,
@@ -173,6 +174,11 @@ export class ChallengesService {
     if (clubId && input.condition.type === 'DISTINCT_CLUBS') {
       throw new BadRequestException(
         '« Clubs différents » n’a de sens que pour un défi du groupement.',
+      );
+    }
+    if (!clubId && input.rewardGpr) {
+      throw new BadRequestException(
+        'Un défi du GPR rapporte un badge, pas de points : les points sont propres à chaque club.',
       );
     }
     if (actor.role === Role.CLUB_ADMIN && input.rewardGpr) {

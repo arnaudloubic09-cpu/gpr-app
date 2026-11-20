@@ -120,7 +120,7 @@ export class GamificationService {
           userId,
           type: 'POINTS_VALIDATED',
           title: `+${g.points} points GPR`,
-          body: `Vos points pour la partie du ${shortDate(g.startsAt)} à ${g.clubName} sont validés.`,
+          body: `Vos points pour la partie du ${shortDate(g.startsAt)} sont validés, à utiliser à ${g.clubName}.`,
           data: { screen: 'home' },
           dedupeKey: `points:${g.bookingId}:${userId}`,
         })),
@@ -195,7 +195,8 @@ export class GamificationService {
     now: Date,
   ) {
     const parts: string[] = [];
-    if (c.rewardGpr) {
+    // Points : défis des clubs uniquement (crédités dans le club du défi). Défis du GPR : badge.
+    if (c.rewardGpr && c.clubId) {
       await this.prisma.ledgerEntry.createMany({
         data: [
           {
