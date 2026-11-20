@@ -1,20 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { BalanceView, LevelStatus, TransactionItem } from '@gpr/core';
+import type { BalanceView, LevelStatus } from '@gpr/core';
 import { Link, router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { AnnouncementBanner } from '../../src/components/announcement-banner';
 import { LevelCard } from '../../src/components/level-card';
-import { TransactionRow } from '../../src/components/transaction-row';
-import {
-  Button,
-  Card,
-  Empty,
-  ErrorText,
-  Loading,
-  Screen,
-  styles,
-  Title,
-} from '../../src/components/ui';
+import { NavTile } from '../../src/components/nav-tile';
+import { Card, ErrorText, Screen, styles, Title } from '../../src/components/ui';
 import { useAuth } from '../../src/lib/auth';
 import { LEVEL_COLORS, points } from '../../src/lib/format';
 import { colors, radius, space } from '../../src/lib/theme';
@@ -25,7 +16,6 @@ export default function HomeScreen() {
   const balance = useApi<BalanceView>('/me/balance');
   const level = useApi<LevelStatus>('/me/level');
   const notifs = useApi<{ unread: number }>('/me/notifications');
-  const tx = useApi<{ items: TransactionItem[] }>('/me/transactions?limit=5');
 
   return (
     <Screen>
@@ -116,34 +106,18 @@ export default function HomeScreen() {
 
       {level.data ? <LevelCard level={level.data} /> : null}
 
-      <Button
-        label="Partenaires locaux"
-        variant="secondary"
+      <NavTile
         icon="storefront-outline"
+        title="Partenaires locaux"
+        subtitle="Les avantages chez les commerçants partenaires"
         onPress={() => router.push('/local-partners')}
       />
-      <View style={{ height: space(3) }} />
-
-      <Card>
-        <View style={[styles.row, { justifyContent: 'space-between' }]}>
-          <Text style={styles.h2}>Dernières activités</Text>
-          <Link href="/history" asChild>
-            <Pressable accessibilityRole="link">
-              <Text style={{ color: colors.primary, fontWeight: '600' }}>Tout voir</Text>
-            </Pressable>
-          </Link>
-        </View>
-        {tx.loading && !tx.data ? <Loading /> : null}
-        {tx.data?.items.length === 0 ? (
-          <Empty
-            icon="tennisball-outline"
-            text="Jouez une partie dans un club du groupement pour gagner vos premiers points GPR."
-          />
-        ) : null}
-        {tx.data?.items.map((t) => (
-          <TransactionRow key={t.id} t={t} />
-        ))}
-      </Card>
+      <NavTile
+        icon="time-outline"
+        title="Dernières activités"
+        subtitle="Points gagnés, coupons, défis réussis"
+        onPress={() => router.push('/history')}
+      />
     </Screen>
   );
 }
