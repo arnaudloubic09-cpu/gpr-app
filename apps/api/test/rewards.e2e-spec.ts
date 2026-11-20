@@ -194,6 +194,23 @@ describe('Catalogue, échange de points et coupons (intégration)', () => {
       expect(balance.clubs.find((c) => c.club.id === other.id)).toBeUndefined();
     });
 
+    it('le club principal apparaît en premier, même sans aucun point', async () => {
+      const fav = await createClub(prisma, 'Club principal');
+      await prisma.user.update({ where: { id: player.id }, data: { favoriteClubId: fav.id } });
+      await credit(player, 520);
+      const res = await http().get('/me/balance').set(auth).expect(200);
+      expect(
+        res.body.clubs.map((c: { club: { id: string }; available: number; favorite: boolean }) => [
+          c.club.id,
+          c.available,
+          c.favorite,
+        ]),
+      ).toEqual([
+        [fav.id, 0, true],
+        [club.id, 520, false],
+      ]);
+    });
+
     it('solde affiché club par club', async () => {
       const other = await createClub(prisma, 'Autre club');
       await credit(player, 120);

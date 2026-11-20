@@ -56,6 +56,10 @@ export class LedgerService {
       this.prisma.user.findUnique({ where: { id: userId }, select: { favoriteClubId: true } }),
     ]);
     const balances = computeClubBalances(entries, now);
+    // Le club principal est toujours affiché (en premier), même sans aucun point
+    const fav = user?.favoriteClubId;
+    if (fav && !balances.some((b) => b.clubId === fav))
+      balances.push({ clubId: fav, available: 0, pending: 0, expiringSoon: 0 });
     const clubs = await this.prisma.club.findMany({
       where: { id: { in: balances.map((b) => b.clubId) } },
       select: { id: true, name: true },
