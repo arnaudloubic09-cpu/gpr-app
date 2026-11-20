@@ -485,3 +485,16 @@ button.danger {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
+/* Espace partenaire local (téléphone) */
+main.partner {
+  max-width: 560px;
+  padding: 28px 16px 48px;
+}
+main.partner h1 {
+  font-size: 1.5rem;
+}
+main.partner ol {
+  padding-left: 20px;
+  line-height: 1.6;
+}

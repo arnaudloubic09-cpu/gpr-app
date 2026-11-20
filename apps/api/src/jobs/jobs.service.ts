@@ -7,6 +7,7 @@ import { LedgerService } from '../ledger/ledger.service';
 import { CouponsService } from '../rewards/coupons.service';
 import { GamificationService } from '../gamification/gamification.service';
 import { GdprService } from '../gamification/gdpr.service';
+import { PartnerPortalService } from '../club-content/partner-portal.service';
 import { VipService } from '../vip/vip.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncService } from '../sync/sync.service';
@@ -26,8 +27,10 @@ export const GLOBAL_SCHEDULES = {
   gamification: { pattern: '*/15 * * * *' },
   /** Anonymisation des comptes au terme du délai de rétractation de 30 jours. */
   'gdpr-deletions': { pattern: '30 3 * * *', tz: 'Europe/Paris' },
-  /** Carte VIP : attribution / prolongation pour les joueurs au niveau le plus élevé (si activée). */
+  /** Carte VIP : période VIP des joueurs ayant assez de parties sur 12 mois (si activée). */
   vip: { pattern: '0 4 * * *', tz: 'Europe/Paris' },
+  /** Le 1er du mois : récapitulatif des utilisations envoyé aux partenaires locaux. */
+  'local-partners-report': { pattern: '0 9 1 * *', tz: 'Europe/Paris' },
 } as const;
 type JobData = { clubId?: string };
 
@@ -54,6 +57,7 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     private readonly gamification: GamificationService,
     private readonly gdpr: GdprService,
     private readonly vip: VipService,
+    private readonly partnerPortal: PartnerPortalService,
   ) {}
 
   async onModuleInit() {
@@ -112,7 +116,9 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
       case 'gdpr-deletions':
         return this.gdpr.runDueDeletions();
       case 'vip':
-        return this.vip.grantPlatinum();
+        return this.vip.refreshGamesMemberships();
+      case 'local-partners-report':
+        return this.partnerPortal.monthlyReports();
     }
   }
 

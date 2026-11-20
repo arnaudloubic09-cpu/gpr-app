@@ -42,7 +42,7 @@ async function main() {
         console.log({ refunded: await app.get(CouponsService).expireDue() });
         break;
       case 'vip':
-        console.log({ granted: await app.get(VipService).grantPlatinum() });
+        console.log({ granted: await app.get(VipService).refreshGamesMemberships() });
         break;
       case 'gdpr-deletions':
         console.log({ anonymized: await app.get(GdprService).runDueDeletions() });

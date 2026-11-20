@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Put,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import {
   PartnerInput,
@@ -49,12 +38,6 @@ export class MeVipController {
   @Post('partners/:partnerId/code')
   requestCode(@Param('partnerId', ParseUUIDPipe) partnerId: string, @CurrentUser() u: AuthUser) {
     return this.vip.requestCode(u.id, partnerId);
-  }
-
-  @Post('purchase')
-  @HttpCode(HttpStatus.OK)
-  purchase(@CurrentUser() u: AuthUser) {
-    return this.vip.purchase(u.id);
   }
 }
 

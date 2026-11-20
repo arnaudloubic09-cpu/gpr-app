@@ -37,22 +37,6 @@ describe('Carte VIP et partenaires (intégration)', () => {
     await prisma.$disconnect();
   });
 
-  async function points(user: User, amount: number) {
-    const t = new Date(Date.now() - 86_400_000);
-    await prisma.ledgerEntry.create({
-      data: {
-        userId: user.id,
-        type: 'EARN',
-        amount,
-        sourceType: 'BOOKING',
-        sourceId: randomUUID(),
-        idempotencyKey: `t:${randomUUID()}`,
-        earnedAt: t,
-        availableAt: t,
-        expiresAt: addMonths(t, 12),
-      },
-    });
-  }
   const newPlayer = () =>
     prisma.user.create({ data: { email: `${randomUUID()}@t.example`, firstName: 'Léo' } });
   async function partnerWithCodes(n: number, extra: Record<string, unknown> = {}) {
@@ -78,19 +62,49 @@ describe('Carte VIP et partenaires (intégration)', () => {
     return res.body as { id: string; name: string };
   }
 
+  const DAY = 86_400_000;
+  /** n parties validées (une réservation chacune), jouées il y a `daysAgo` jours. */
+  async function games(
+    user: User,
+    n: number,
+    daysAgo = 1,
+    extra: { availableInDays?: number } = {},
+  ) {
+    const ids: string[] = [];
+    for (let i = 0; i < n; i++) {
+      const t = new Date(Date.now() - daysAgo * DAY - i * 60_000);
+      const avail = extra.availableInDays ? new Date(Date.now() + extra.availableInDays * DAY) : t;
+      const e = await prisma.ledgerEntry.create({
+        data: {
+          userId: user.id,
+          type: 'EARN',
+          amount: 30,
+          sourceType: 'BOOKING',
+          sourceId: randomUUID(),
+          idempotencyKey: `t:${randomUUID()}`,
+          earnedAt: t,
+          availableAt: avail,
+          expiresAt: addMonths(t, 12),
+        },
+      });
+      ids.push(e.id);
+    }
+    return ids;
+  }
+  const status = async (u: User) =>
+    (
+      await http()
+        .get('/me/vip')
+        .set(await as(u))
+        .expect(200)
+    ).body;
+
   it('désactivée : rien n’est visible ni attribué côté joueur', async () => {
     await setVip(false);
     const p = await newPlayer();
-    await points(p, 3500);
-    expect(await vip.grantPlatinum()).toBe(0);
-    expect(
-      (
-        await http()
-          .get('/me/vip')
-          .set(await as(p))
-          .expect(200)
-      ).body,
-    ).toEqual({ enabled: false });
+    await games(p, 12);
+    expect(await vip.refreshGamesMemberships()).toBe(0);
+    expect(await status(p)).toEqual({ enabled: false });
     await http()
       .get('/me/vip/partners')
       .set(await as(p))
@@ -104,76 +118,99 @@ describe('Carte VIP et partenaires (intégration)', () => {
     ).toBeNull();
   });
 
-  it('à l’activation, les joueurs Platine reçoivent leur carte VIP pour 1 an (une seule fois)', async () => {
-    const platinum = await newPlayer();
-    await points(platinum, 3200);
-    const gold = await newPlayer();
-    await points(gold, 1600);
-    await setVip(true); // attribue immédiatement
-    await vip.grantPlatinum(); // relance : aucun doublon
-
-    const s = (
-      await http()
-        .get('/me/vip')
-        .set(await as(platinum))
-        .expect(200)
-    ).body;
-    expect(s).toMatchObject({
+  it('VIP gratuit dès 10 parties sur 12 mois ; les parties annulées, en attente ou trop anciennes ne comptent pas', async () => {
+    await setVip(true);
+    const p = await newPlayer();
+    const [reversed] = await games(p, 9);
+    await games(p, 3, 400); // plus de 12 mois
+    await games(p, 2, 0, { availableInDays: 1 }); // pas encore validées
+    expect(await status(p)).toMatchObject({
       enabled: true,
-      active: true,
-      sources: ['PLATINUM'],
-      freeLevel: { label: 'Platine' },
-      priceCents: 6000,
-      purchaseEnabled: false,
+      active: false,
+      games: 9,
+      gamesRequired: 10,
+      sources: [],
     });
-    expect(
-      Math.round((new Date(s.until).getTime() - Date.now()) / 86_400_000),
-    ).toBeGreaterThanOrEqual(364);
-    expect(await prisma.vipMembership.count({ where: { userId: platinum.id } })).toBe(1);
-    expect(
-      (
-        await http()
-          .get('/me/vip')
-          .set(await as(gold))
-      ).body.active,
-    ).toBe(false);
+
+    await games(p, 1, 2);
+    const s = await status(p);
+    expect(s).toMatchObject({ active: true, games: 10, sources: ['GAMES'] });
+    // Valable jusqu'à 12 mois après la plus ancienne des 10 parties (il y a 2 jours)
+    expect(Math.round((new Date(s.until).getTime() - Date.now()) / DAY)).toBe(363);
     expect(
       (
         await http()
           .get('/me/member-card')
-          .set(await as(platinum))
+          .set(await as(p))
       ).body.vip,
     ).toMatchObject({ active: true });
-  });
 
-  it('garde sa carte pendant 1 an même s’il redescend, puis prolongation s’il est toujours Platine', async () => {
-    await setVip(true);
-    const p = await newPlayer();
-    await points(p, 3100);
-    await vip.grantPlatinum();
-    // Redescend (annulations) : la carte reste valable
+    // Une partie annulée par le club ne compte plus
     await prisma.ledgerEntry.create({
       data: {
         userId: p.id,
         type: 'REVERSAL',
-        amount: -2000,
+        amount: -30,
         sourceType: 'BOOKING',
+        reversesEntryId: reversed,
         idempotencyKey: `t:${randomUUID()}`,
         earnedAt: new Date(),
         availableAt: new Date(),
       },
     });
+    expect(await status(p)).toMatchObject({ active: false, games: 9 });
+  });
+
+  it('une même réservation recréditée (changement de joueurs) compte pour une seule partie', async () => {
+    await setVip(true);
+    const p = await newPlayer();
+    await games(p, 9);
+    const bookingId = randomUUID();
+    for (const k of ['a', 'b']) {
+      await prisma.ledgerEntry.create({
+        data: {
+          userId: p.id,
+          type: 'EARN',
+          amount: 10,
+          sourceType: 'BOOKING',
+          sourceId: bookingId,
+          idempotencyKey: `t:${bookingId}:${k}`,
+          earnedAt: new Date(Date.now() - DAY),
+          availableAt: new Date(Date.now() - DAY),
+        },
+      });
+    }
+    expect(await status(p)).toMatchObject({ games: 10, active: true });
+  });
+
+  it('statut glissant : la carte s’arrête quand les parties sortent des 12 derniers mois', async () => {
+    await setVip(true);
+    const p = await newPlayer();
+    await games(p, 10, 360);
+    expect((await status(p)).active).toBe(true);
+    const inTenDays = new Date(Date.now() + 10 * DAY);
+    expect((await vip.status(p.id, inTenDays)).active).toBe(false);
+  });
+
+  it('tâche quotidienne : enregistre la période VIP et prévient le joueur une seule fois', async () => {
+    await setVip(true);
+    const p = await newPlayer();
+    await games(p, 10);
+    await vip.refreshGamesMemberships();
+    await vip.refreshGamesMemberships();
+    const rows = await prisma.vipMembership.findMany({ where: { userId: p.id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].source).toBe('GAMES');
     expect(
-      (
-        await http()
-          .get('/me/vip')
-          .set(await as(p))
-      ).body.active,
-    ).toBe(true);
-    // Un an plus tard, plus Platine : pas de prolongation
-    const later = new Date(Date.now() + 366 * 86_400_000);
-    await vip.grantPlatinum(later);
-    expect(await prisma.vipMembership.count({ where: { userId: p.id } })).toBe(1);
+      await prisma.notification.count({
+        where: { userId: p.id, title: 'Votre carte VIP est activée' },
+      }),
+    ).toBe(1);
+    // Nouvelle partie : la période s'allonge, sans nouvelle notification
+    await games(p, 1, 0);
+    await vip.refreshGamesMemberships();
+    const [after] = await prisma.vipMembership.findMany({ where: { userId: p.id } });
+    expect(after.endsAt.getTime()).toBeGreaterThan(rows[0].endsAt.getTime());
   });
 
   it('attribution manuelle par le super admin (prolonge la carte en cours), avec audit', async () => {
@@ -202,13 +239,12 @@ describe('Carte VIP et partenaires (intégration)', () => {
       .expect(403);
   });
 
-  it('achat en ligne : message clair tant que le paiement n’est pas branché', async () => {
+  it('plus d’achat de la carte : la carte est gratuite', async () => {
     await setVip(true);
-    const res = await http()
+    await http()
       .post('/me/vip/purchase')
       .set(await as(await newPlayer()))
-      .expect(503);
-    expect(res.body.message).toContain('bientôt disponible');
+      .expect(404);
   });
 
   describe('codes promo partenaires', () => {

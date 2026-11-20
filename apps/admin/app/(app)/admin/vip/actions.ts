@@ -7,8 +7,7 @@ import { apiSend, type ActionResult } from '@/lib/api';
 export async function saveVipSettings(_prev: ActionResult | null, form: FormData) {
   const res = await apiSend('/admin/vip/settings', 'PUT', {
     enabled: form.get('enabled') === 'on',
-    priceCents: Math.round(Number(form.get('price')) * 100),
-    purchaseEnabled: false, // paiement en ligne branché à l'activation (compte Stripe du GPR)
+    gamesRequired: Number(form.get('gamesRequired')),
   });
   if (res.ok) revalidatePath('/admin/vip');
   return res;

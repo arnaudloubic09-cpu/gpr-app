@@ -1,7 +1,9 @@
 import { ActionForm } from '@/components/action-form';
 import { Badge, Empty, PageHeader } from '@/components/ui';
+import { CopyButton } from '@/components/copy-button';
 import { apiGet } from '@/lib/api';
-import { savePartner } from './actions';
+import { n } from '@/lib/format';
+import { regeneratePortal, savePartner } from './actions';
 
 type Partner = {
   id: string;
@@ -12,6 +14,9 @@ type Partner = {
   mapsUrl: string;
   logoUrl: string | null;
   isActive: boolean;
+  email: string | null;
+  portalUrl: string;
+  stats: { thisMonth: number; lastMonth: number; total: number };
 };
 
 export default async function LocalPartnersPage({
@@ -29,7 +34,7 @@ export default async function LocalPartnersPage({
     <>
       <PageHeader
         title="Partenaires locaux"
-        subtitle="Commerces partenaires de votre club. L’avantage est actif pour les joueurs ayant joué dans votre club au cours des 30 derniers jours, sur présentation de l’app."
+        subtitle="Commerces partenaires de votre club. L’avantage est réservé aux joueurs ayant joué dans votre club au cours des 30 derniers jours : le joueur affiche un QR code dans l’app, le partenaire le scanne pour valider. Chaque utilisation est comptée."
       />
       <div className="card table-wrap">
         {list.length === 0 ? (
@@ -41,6 +46,9 @@ export default async function LocalPartnersPage({
                 <th></th>
                 <th>Partenaire</th>
                 <th>Offre</th>
+                <th className="num">Ce mois</th>
+                <th className="num">Mois dernier</th>
+                <th className="num">Total</th>
                 <th>Adresse</th>
                 <th>Statut</th>
                 <th></th>
@@ -70,6 +78,9 @@ export default async function LocalPartnersPage({
                     {p.description ? <div className="muted small">{p.description}</div> : null}
                   </td>
                   <td>{p.offer}</td>
+                  <td className="num">{n(p.stats.thisMonth)}</td>
+                  <td className="num">{n(p.stats.lastMonth)}</td>
+                  <td className="num">{n(p.stats.total)}</td>
                   <td className="small">
                     <a href={p.mapsUrl} target="_blank" rel="noreferrer">
                       {p.address}
@@ -85,6 +96,27 @@ export default async function LocalPartnersPage({
           </table>
         )}
       </div>
+      {editing ? (
+        <div className="card">
+          <h2>Lien personnel de « {editing.name} »</h2>
+          <p className="muted">
+            Envoyez ce lien au partenaire (email, SMS…). Il l’ouvre <strong>une fois</strong> sur le
+            téléphone qui servira à scanner les QR codes des joueurs : il y retrouve aussi le suivi
+            de ses utilisations. Sans mot de passe : ne le diffusez qu’au partenaire.
+          </p>
+          <div className="inline-form">
+            <input readOnly value={editing.portalUrl} aria-label="Lien personnel du partenaire" />
+            <CopyButton text={editing.portalUrl} label="Copier le lien" />
+          </div>
+          <ActionForm
+            action={regeneratePortal.bind(null, clubId, editing.id)}
+            submitLabel="Créer un nouveau lien"
+            successMessage="Nouveau lien créé : l’ancien ne fonctionne plus."
+            variant="secondary"
+            confirm="L’ancien lien ne fonctionnera plus : le partenaire devra ouvrir le nouveau. Continuer ?"
+          />
+        </div>
+      ) : null}
       <h2>{editing ? `Modifier « ${editing.name} »` : 'Nouveau partenaire'}</h2>
       <ActionForm
         key={editing?.id ?? 'new'}
@@ -136,6 +168,15 @@ export default async function LocalPartnersPage({
           maxLength={300}
           defaultValue={editing?.description ?? ''}
           placeholder="Hors menu du jour, du lundi au vendredi"
+        />
+        <label htmlFor="email">Email du partenaire (récapitulatif mensuel, facultatif)</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          maxLength={200}
+          defaultValue={editing?.email ?? ''}
+          placeholder="contact@bistrot-du-padel.fr"
         />
         <label htmlFor="logo">Logo (PNG, JPEG ou WebP, 300 Ko max.)</label>
         <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" />

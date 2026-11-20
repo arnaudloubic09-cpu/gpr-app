@@ -12,6 +12,7 @@ describe('Planification des tâches', () => {
       'expire',
       'gamification',
       'gdpr-deletions',
+      'local-partners-report',
       'vip',
     ]);
   });

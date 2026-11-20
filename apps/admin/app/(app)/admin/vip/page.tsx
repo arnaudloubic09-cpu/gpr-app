@@ -7,8 +7,9 @@ import { n } from '@/lib/format';
 import { createPartner, saveVipSettings } from './actions';
 
 type Overview = {
-  settings: { enabled: boolean; priceCents: number; purchaseEnabled: boolean };
+  settings: { enabled: boolean; gamesRequired: number };
   activeMembers: Record<string, number>;
+  activeTotal: number;
   partners: {
     id: string;
     name: string;
@@ -22,7 +23,6 @@ type Overview = {
 
 export default async function VipPage() {
   const o = await apiGet<Overview>('/admin/vip');
-  const members = Object.values(o.activeMembers).reduce((a, b) => a + b, 0);
   return (
     <>
       <PageHeader
@@ -37,7 +37,7 @@ export default async function VipPage() {
         confirm={
           o.settings.enabled
             ? undefined
-            : 'Si vous activez la carte VIP, elle devient visible pour tous les joueurs et les joueurs Platine la reçoivent immédiatement. Continuer ?'
+            : 'Si vous activez la carte VIP, elle devient visible pour tous les joueurs et les joueurs qui ont déjà assez de parties la reçoivent immédiatement. Continuer ?'
         }
       >
         <h2>
@@ -49,30 +49,23 @@ export default async function VipPage() {
           )}
         </h2>
         <p className="muted">
-          Accès gratuit pendant 1 an pour les joueurs qui atteignent le niveau Platine (renouvelé
-          s’ils le sont toujours à l’échéance). Accès payant : achat simple d’un an, renouvelé par
-          le joueur.
+          Carte <strong>gratuite</strong> : un joueur est VIP tant qu’il a joué au moins le nombre
+          de parties ci-dessous dans les clubs du GPR sur les 12 derniers mois (statut glissant).
+          Vous pouvez aussi l’attribuer à la main depuis la fiche d’un joueur (geste commercial).
         </p>
         <div className="form-grid">
           <div>
-            <label htmlFor="price">Prix de la carte (€ / an)</label>
+            <label htmlFor="gamesRequired">Parties nécessaires sur 12 mois</label>
             <input
-              id="price"
-              name="price"
+              id="gamesRequired"
+              name="gamesRequired"
               type="number"
-              min={0}
+              min={1}
+              max={500}
               step={1}
-              defaultValue={o.settings.priceCents / 100}
+              defaultValue={o.settings.gamesRequired}
               required
             />
-          </div>
-          <div>
-            <label>Paiement en ligne</label>
-            <p className="muted small" style={{ marginTop: 6 }}>
-              Pas encore branché : nécessite le compte de paiement (Stripe) du GPR et les conditions
-              générales de vente. En attendant, attribuez la carte depuis la fiche du joueur
-              (cadeau, vente au comptoir).
-            </p>
           </div>
         </div>
         <label className="checkbox">
@@ -82,9 +75,11 @@ export default async function VipPage() {
       </ActionForm>
 
       <div className="grid">
-        <Kpi label="Membres VIP actifs" value={n(members)} />
-        <Kpi label="Via le niveau Platine" value={n(o.activeMembers.PLATINUM ?? 0)} />
-        <Kpi label="Achetées" value={n(o.activeMembers.PURCHASE ?? 0)} />
+        <Kpi label="Membres VIP actifs" value={n(o.activeTotal)} />
+        <Kpi
+          label={`Grâce à leurs ${o.settings.gamesRequired} parties`}
+          value={n(o.activeMembers.GAMES ?? 0)}
+        />
         <Kpi label="Attribuées à la main" value={n(o.activeMembers.MANUAL ?? 0)} />
       </div>
 

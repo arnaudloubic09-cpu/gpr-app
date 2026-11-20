@@ -95,40 +95,41 @@ enum ConsentType {
 
 /// Un compte = un seul rôle. CLUB_ADMIN est rattaché à un club (contrainte CHECK en SQL).
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
-  email          String    @unique
-  firstName      String?
-  lastName       String?
-  phone          String?
-  role           Role      @default(PLAYER)
-  clubId         String?   @db.Uuid
-  favoriteClubId String?   @db.Uuid
-  lastLoginAt    DateTime?
+  id                   String    @id @default(uuid()) @db.Uuid
+  email                String    @unique
+  firstName            String?
+  lastName             String?
+  phone                String?
+  role                 Role      @default(PLAYER)
+  clubId               String?   @db.Uuid
+  favoriteClubId       String?   @db.Uuid
+  lastLoginAt          DateTime?
   /// Suppression RGPD : le compte est anonymisé (le ledger, immuable, est conservé sans donnée personnelle).
-  anonymizedAt   DateTime?
+  anonymizedAt         DateTime?
   /// Compte admin désactivé par le super admin (connexion refusée).
-  disabledAt     DateTime?
+  disabledAt           DateTime?
   /// Code de la carte de membre (QR présenté au comptoir pour les avantages de niveau)
-  memberCode     String?   @unique
+  memberCode           String?   @unique
   /// RGPD : suppression demandée (rétractation possible jusqu'à deletionScheduledFor)
   deletionRequestedAt  DateTime?
   deletionScheduledFor DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  club          Club?                @relation("ClubAdmins", fields: [clubId], references: [id])
-  favoriteClub  Club?                @relation("FavoriteClub", fields: [favoriteClubId], references: [id])
-  refreshTokens RefreshToken[]
-  consents      Consent[]
-  externalLinks PlayerExternalLink[]
-  ledger        LedgerEntry[]        @relation("LedgerOwner")
-  coupons       Coupon[]             @relation("CouponOwner")
-  progress      ChallengeProgress[]
-  badges        PlayerBadge[]
-  pushTokens    PushToken[]
-  vipMemberships VipMembership[]
-  partnerCodes  PartnerCode[]
-  notifications Notification[]
+  club             Club?                @relation("ClubAdmins", fields: [clubId], references: [id])
+  favoriteClub     Club?                @relation("FavoriteClub", fields: [favoriteClubId], references: [id])
+  refreshTokens    RefreshToken[]
+  consents         Consent[]
+  externalLinks    PlayerExternalLink[]
+  ledger           LedgerEntry[]        @relation("LedgerOwner")
+  coupons          Coupon[]             @relation("CouponOwner")
+  progress         ChallengeProgress[]
+  badges           PlayerBadge[]
+  pushTokens       PushToken[]
+  vipMemberships   VipMembership[]
+  localPartnerUses LocalPartnerUse[]
+  partnerCodes     PartnerCode[]
+  notifications    Notification[]
 
   @@index([role])
   @@index([clubId])
@@ -148,15 +149,15 @@ model OtpCode {
 }
 
 model RefreshToken {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @db.Uuid
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
   /// Famille de rotation : si un jeton déjà utilisé est rejoué, toute la famille est révoquée.
-  familyId     String    @db.Uuid
-  tokenHash    String    @unique
-  expiresAt    DateTime
-  usedAt       DateTime?
-  revokedAt    DateTime?
-  createdAt    DateTime  @default(now())
+  familyId  String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -180,35 +181,35 @@ model Consent {
 // ─────────────────────────────── Clubs & connecteurs ───────────────────────────────
 
 model Club {
-  id                  String   @id @default(uuid()) @db.Uuid
+  id                  String             @id @default(uuid()) @db.Uuid
   name                String
-  slug                String   @unique
+  slug                String             @unique
   city                String
-  timezone            String   @default("Europe/Paris")
+  timezone            String             @default("Europe/Paris")
   /// Le club choisit d'activer ou non le bonus heures creuses (plages et multiplicateur fixés par le GPR).
-  offPeakBonusEnabled Boolean  @default(false)
+  offPeakBonusEnabled Boolean            @default(false)
   levelPerks          LevelPerk[]
   announcements       ClubAnnouncement[]
   localPartners       LocalPartner[]
   /// Comptoir : validation immédiate du coupon dès le scan (sans clic de confirmation)
-  counterAutoValidate Boolean  @default(false)
+  counterAutoValidate Boolean            @default(false)
   /// Logo du club (PNG, JPEG ou WebP, 300 Ko max.)
   logo                Bytes?
   logoMime            String?
   logoUpdatedAt       DateTime?
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  isActive            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
-  admins      User[]               @relation("ClubAdmins")
-  favoriteOf  User[]               @relation("FavoriteClub")
-  connector   ClubConnectorConfig?
-  bookings    Booking[]
-  syncRuns    SyncRun[]
-  rewards     Reward[]
-  coupons     Coupon[]
-  challenges  Challenge[]
-  ledger      LedgerEntry[]
+  admins     User[]               @relation("ClubAdmins")
+  favoriteOf User[]               @relation("FavoriteClub")
+  connector  ClubConnectorConfig?
+  bookings   Booking[]
+  syncRuns   SyncRun[]
+  rewards    Reward[]
+  coupons    Coupon[]
+  challenges Challenge[]
+  ledger     LedgerEntry[]
 }
 
 model ClubConnectorConfig {
@@ -321,30 +322,30 @@ model RuleSet {
 /// Grand livre IMMUABLE (trigger SQL bloquant UPDATE/DELETE). Le solde = somme des montants.
 /// Statut « en attente » / « validé » déduit de availableAt (pas de mutation).
 model LedgerEntry {
-  id               String           @id @default(uuid()) @db.Uuid
-  userId           String           @db.Uuid
-  type             LedgerType
+  id              String           @id @default(uuid()) @db.Uuid
+  userId          String           @db.Uuid
+  type            LedgerType
   /// Montant signé en GPR (+ gain, − rachat / expiration / annulation).
-  amount           Int
-  sourceType       LedgerSourceType
-  sourceId         String?
+  amount          Int
+  sourceType      LedgerSourceType
+  sourceId        String?
   /// Garantit qu'une même source ne crédite jamais deux fois.
-  idempotencyKey   String           @unique
-  clubId           String?          @db.Uuid
-  reason           String?
-  authorId         String?          @db.Uuid
-  reversesEntryId  String?          @db.Uuid
-  ruleSetVersion   Int?
-  earnedAt         DateTime
-  availableAt      DateTime
-  expiresAt        DateTime?
-  createdAt        DateTime         @default(now())
+  idempotencyKey  String           @unique
+  clubId          String?          @db.Uuid
+  reason          String?
+  authorId        String?          @db.Uuid
+  reversesEntryId String?          @db.Uuid
+  ruleSetVersion  Int?
+  earnedAt        DateTime
+  availableAt     DateTime
+  expiresAt       DateTime?
+  createdAt       DateTime         @default(now())
 
-  user     User         @relation("LedgerOwner", fields: [userId], references: [id])
-  club     Club?        @relation(fields: [clubId], references: [id])
-  reverses LedgerEntry? @relation("Reversal", fields: [reversesEntryId], references: [id])
+  user       User          @relation("LedgerOwner", fields: [userId], references: [id])
+  club       Club?         @relation(fields: [clubId], references: [id])
+  reverses   LedgerEntry?  @relation("Reversal", fields: [reversesEntryId], references: [id])
   reversedBy LedgerEntry[] @relation("Reversal")
-  coupon   Coupon?
+  coupon     Coupon?
 
   @@index([userId, earnedAt])
   @@index([clubId, earnedAt])
@@ -354,22 +355,22 @@ model LedgerEntry {
 // ─────────────────────────────── Récompenses ───────────────────────────────
 
 model Reward {
-  id                 String         @id @default(uuid()) @db.Uuid
-  clubId             String         @db.Uuid
-  category           RewardCategory
-  kind               RewardKind
-  title              String
-  description        String?
-  costGpr            Int
+  id            String         @id @default(uuid()) @db.Uuid
+  clubId        String         @db.Uuid
+  category      RewardCategory
+  kind          RewardKind
+  title         String
+  description   String?
+  costGpr       Int
   /// % (1-100) pour DISCOUNT_PERCENT, centimes pour DISCOUNT_AMOUNT, null pour FREE_ITEM.
-  discountValue      Int?
+  discountValue Int?
   /// null = stock illimité
-  stock              Int?
-  startsAt           DateTime?
-  endsAt             DateTime?
-  isActive           Boolean        @default(true)
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  stock         Int?
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   club    Club     @relation(fields: [clubId], references: [id])
   coupons Coupon[]
@@ -582,9 +583,12 @@ model AppSetting {
 }
 
 enum VipSource {
+  /// Historique : anciennes règles (carte au niveau Platine, achat)
   PLATINUM
   PURCHASE
   MANUAL
+  /// Parties jouées dans les clubs du GPR sur 12 mois glissants
+  GAMES
 }
 
 /// Période de carte VIP (1 an). Le joueur est VIP si une période couvre la date du jour.
@@ -691,10 +695,34 @@ model LocalPartner {
   logo        Bytes?
   logoMime    String?
   isActive    Boolean  @default(true)
+  /// Email du partenaire : récapitulatif mensuel des utilisations (facultatif)
+  email       String?
+  /// Lien personnel du partenaire (page de suivi et validation des avantages), sans mot de passe
+  portalToken String   @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  club Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  club Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  uses LocalPartnerUse[]
 
   @@index([clubId, isActive])
+}
+
+/// Utilisation d'un avantage partenaire local : QR code à usage unique présenté par le joueur,
+/// validé par le partenaire en le scannant (usedAt renseigné).
+model LocalPartnerUse {
+  id        String    @id @default(uuid()) @db.Uuid
+  partnerId String    @db.Uuid
+  userId    String    @db.Uuid
+  clubId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  partner LocalPartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([partnerId, usedAt])
+  @@index([clubId, usedAt])
 }

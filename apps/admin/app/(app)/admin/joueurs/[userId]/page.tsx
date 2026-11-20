@@ -18,9 +18,10 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ us
   ]);
   const now = new Date();
   const SOURCES: Record<string, string> = {
-    PLATINUM: 'Niveau Platine',
-    PURCHASE: 'Achat',
+    GAMES: 'Parties jouées (12 mois)',
     MANUAL: 'Attribution manuelle',
+    PLATINUM: 'Niveau Platine (ancienne règle)',
+    PURCHASE: 'Achat (ancienne règle)',
   };
   const name = [player.firstName, player.lastName].filter(Boolean).join(' ') || player.email;
   return (
@@ -81,8 +82,8 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ us
         >
           <h2>Attribuer une carte VIP</h2>
           <p className="muted small">
-            Cadeau, partenariat ou vente au comptoir en attendant le paiement en ligne. Prolonge la
-            carte en cours.
+            Geste commercial ou partenariat, en plus de la carte obtenue grâce aux parties jouées.
+            Prolonge une attribution manuelle en cours.
           </p>
           <label htmlFor="vipMonths">Durée (mois)</label>
           <input
@@ -100,7 +101,7 @@ export default async function AdminPlayerPage({ params }: { params: Promise<{ us
             name="reason"
             required
             minLength={5}
-            placeholder="Vente au comptoir de Toulouse, 60 €"
+            placeholder="Geste commercial suite à une réclamation"
           />
         </ActionForm>
       </div>

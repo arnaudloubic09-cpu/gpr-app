@@ -26,11 +26,18 @@ export async function savePartner(
     description: String(form.get('description') ?? '').trim() || null,
     address: String(form.get('address') ?? ''),
     isActive: form.get('isActive') === 'on',
+    email: String(form.get('email') ?? '').trim() || null,
     ...(logo !== undefined ? { logo } : {}),
   };
   const res = id
     ? await apiSend(`/clubs/${clubId}/admin/local-partners/${id}`, 'PATCH', body)
     : await apiSend(`/clubs/${clubId}/admin/local-partners`, 'POST', body);
+  if (res.ok) revalidatePath(`/clubs/${clubId}/partenaires`);
+  return res;
+}
+
+export async function regeneratePortal(clubId: string, id: string, _prev: ActionResult | null) {
+  const res = await apiSend(`/clubs/${clubId}/admin/local-partners/${id}/portal-link`, 'POST');
   if (res.ok) revalidatePath(`/clubs/${clubId}/partenaires`);
   return res;
 }

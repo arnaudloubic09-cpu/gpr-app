@@ -1,23 +1,22 @@
 import { z } from 'zod';
 
 /** Réglages de la carte VIP (super admin). */
-export const vipSettingsSchema = z
-  .object({
-    /** Carte VIP visible et utilisable par les joueurs. Désactivée tant que les partenariats ne sont pas prêts. */
-    enabled: z.boolean(),
-    /** Prix de la carte payante (centimes, 1 an). */
-    priceCents: z.number().int().min(0).max(100_000),
-    /** Paiement en ligne disponible (branché à l'activation, compte Stripe du GPR requis). */
-    purchaseEnabled: z.boolean(),
-  })
-  .strict();
+export const vipSettingsBase = z.object({
+  /** Carte VIP visible et utilisable par les joueurs. Désactivée tant que les partenariats ne sont pas prêts. */
+  enabled: z.boolean(),
+  /** Nombre de parties à jouer dans les clubs du GPR sur 12 mois glissants pour être VIP (gratuit). */
+  gamesRequired: z.number().int().min(1).max(500),
+});
+export const vipSettingsSchema = vipSettingsBase.strict();
 export type VipSettings = z.infer<typeof vipSettingsSchema>;
 
 export const DEFAULT_VIP_SETTINGS: VipSettings = {
   enabled: false,
-  priceCents: 6000,
-  purchaseEnabled: false,
+  gamesRequired: 10,
 };
+
+/** Fenêtre glissante de la carte VIP. */
+export const VIP_WINDOW_DAYS = 365;
 
 export const partnerInputSchema = z
   .object({

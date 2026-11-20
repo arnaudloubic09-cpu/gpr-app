@@ -1,6 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Linking, Pressable, Text, View } from 'react-native';
-import { Card, Empty, ErrorText, Loading, Screen, styles, Title } from '../src/components/ui';
+import { router } from 'expo-router';
+import {
+  Button,
+  Card,
+  Empty,
+  ErrorText,
+  Loading,
+  Screen,
+  styles,
+  Title,
+} from '../src/components/ui';
 import { API_URL } from '../src/config';
 import { formatDate } from '../src/lib/format';
 import { colors, radius, space } from '../src/lib/theme';
@@ -30,7 +40,7 @@ export default function LocalPartnersScreen() {
   }
   return (
     <Screen>
-      <Title subtitle="Présentez cet écran chez le partenaire pour profiter de l’avantage.">
+      <Title subtitle="Chez le partenaire, appuyez sur « Utiliser l’avantage » et faites scanner le QR code.">
         Partenaires locaux
       </Title>
       {loading && !data ? <Loading /> : null}
@@ -100,6 +110,13 @@ export default function LocalPartnersScreen() {
                     : `Jouez une partie à ${p.club.name} pour activer l’avantage (30 jours).`}
                 </Text>
               </View>
+              {p.active ? (
+                <Button
+                  label="Utiliser l’avantage"
+                  icon="qr-code-outline"
+                  onPress={() => router.push(`/local-partner-use/${p.id}`)}
+                />
+              ) : null}
               <Pressable
                 accessibilityRole="link"
                 accessibilityLabel={`Itinéraire vers ${p.name}`}

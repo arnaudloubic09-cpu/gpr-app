@@ -109,6 +109,7 @@ JOBS_ENABLED=true
 SYNC_LOOKBACK_DAYS=7
 PUSH_PROVIDER=log
 API_PORT=3000
+PORTAL_URL=https://${ADMIN_DOMAIN}
 EOF
 
 # Version web de l'app joueur (préproduction)

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
@@ -20,6 +21,9 @@ const MAGIC: Record<string, (b: Buffer) => boolean> = {
 };
 
 /** Décode et vérifie un logo (le type déclaré doit correspondre au contenu réel du fichier). */
+/** Jeton du lien personnel d'un partenaire local (page de suivi et de validation). */
+export const newPortalToken = () => randomBytes(24).toString('base64url');
+
 export function decodeLogo(dataUrl: string): { logo: Buffer; logoMime: string } {
   const [head, b64] = dataUrl.split(',');
   const mime = head.slice(5, head.indexOf(';'));
@@ -161,6 +165,7 @@ export class ClubContentService {
     const { logo, ...rest } = input;
     const data: Prisma.LocalPartnerUncheckedUpdateInput = {
       description: null,
+      email: null,
       ...rest,
       ...(logo === null ? { logo: null, logoMime: null } : logo ? decodeLogo(logo) : {}),
     };
@@ -171,7 +176,11 @@ export class ClubContentService {
       row = await this.prisma.localPartner.update({ where: { id }, data, select: this.listSelect });
     } else {
       row = await this.prisma.localPartner.create({
-        data: { ...(data as Prisma.LocalPartnerUncheckedCreateInput), clubId },
+        data: {
+          ...(data as Prisma.LocalPartnerUncheckedCreateInput),
+          clubId,
+          portalToken: newPortalToken(),
+        },
         select: this.listSelect,
       });
     }
@@ -199,40 +208,39 @@ export class ClubContentService {
    * Partenaires de tous les clubs actifs (club principal en premier). L'avantage d'un partenaire
    * est actif si le joueur a joué dans SON club au cours des 30 derniers jours (partie validée, non annulée).
    */
-  async forPlayer(userId: string, now = new Date()) {
+  /** Dernière partie validée (non annulée) du joueur dans chaque club, sur les 30 derniers jours. */
+  async lastPlayedByClub(userId: string, now = new Date()): Promise<Map<string, Date>> {
     const since = new Date(now.getTime() - LOCAL_PARTNER_ACTIVITY_DAYS * DAY);
-    const [user, partners, earns] = await Promise.all([
+    const earns = await this.prisma.ledgerEntry.findMany({
+      where: {
+        userId,
+        type: 'EARN',
+        sourceType: 'BOOKING',
+        earnedAt: { gte: since },
+        availableAt: { lte: now },
+        reversedBy: { none: {} },
+      },
+      select: { clubId: true, earnedAt: true },
+    });
+    const lastPlayed = new Map<string, Date>();
+    for (const e of earns) {
+      if (!e.clubId) continue;
+      if (!lastPlayed.get(e.clubId) || lastPlayed.get(e.clubId)! < e.earnedAt)
+        lastPlayed.set(e.clubId, e.earnedAt);
+    }
+    return lastPlayed;
+  }
+
+  async forPlayer(userId: string, now = new Date()) {
+    const [user, partners, lastPlayed] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: userId }, select: { favoriteClubId: true } }),
       this.prisma.localPartner.findMany({
         where: { isActive: true, club: { isActive: true } },
         orderBy: { name: 'asc' },
         select: { ...this.listSelect, club: { select: { id: true, name: true } } },
       }),
-      this.prisma.ledgerEntry.findMany({
-        where: {
-          userId,
-          type: 'EARN',
-          sourceType: 'BOOKING',
-          earnedAt: { gte: since },
-          availableAt: { lte: now },
-        },
-        select: { id: true, clubId: true, earnedAt: true },
-      }),
+      this.lastPlayedByClub(userId, now),
     ]);
-    const reversed = new Set(
-      (
-        await this.prisma.ledgerEntry.findMany({
-          where: { type: 'REVERSAL', reversesEntryId: { in: earns.map((e) => e.id) } },
-          select: { reversesEntryId: true },
-        })
-      ).map((r) => r.reversesEntryId),
-    );
-    const lastPlayed = new Map<string, Date>();
-    for (const e of earns) {
-      if (reversed.has(e.id) || !e.clubId) continue;
-      if (!lastPlayed.get(e.clubId) || lastPlayed.get(e.clubId)! < e.earnedAt)
-        lastPlayed.set(e.clubId, e.earnedAt);
-    }
     return partners
       .map(({ club, ...p }) => {
         const last = lastPlayed.get(p.clubId);

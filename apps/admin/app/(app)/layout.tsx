@@ -42,6 +42,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           { href: '/admin/defis', label: 'Défis du groupement' },
           { href: '/admin/badges', label: 'Badges' },
           { href: '/admin/vip', label: 'Carte VIP et partenaires' },
+          { href: '/admin/partenaires-locaux', label: 'Partenaires locaux' },
           { href: '/admin/regles', label: 'Règles GPR' },
           { href: '/admin/comptes', label: 'Comptes admin' },
           { href: '/admin/audit', label: 'Journal d’audit' },

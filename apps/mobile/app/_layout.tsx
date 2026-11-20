@@ -64,6 +64,7 @@ function Gate() {
       <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       <Stack.Screen name="vip" options={{ title: 'Carte VIP' }} />
       <Stack.Screen name="local-partners" options={{ title: 'Partenaires locaux' }} />
+      <Stack.Screen name="local-partner-use/[id]" options={{ title: 'Utiliser l’avantage' }} />
       <Stack.Screen name="privacy" options={{ title: 'Confidentialité et données' }} />
     </Stack>
   );

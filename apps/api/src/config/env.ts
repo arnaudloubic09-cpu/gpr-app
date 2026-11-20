@@ -33,6 +33,8 @@ const envSchema = z.object({
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().default(1025),
   SMTP_FROM: z.string().default('GPR <no-reply@gpr.local>'),
+  /** Adresse publique du back-office (pages des partenaires locaux : suivi et validation). */
+  PORTAL_URL: z.string().url().default('http://localhost:3001'),
   /** Fournisseur d'emails en production (ex. Brevo) : authentification et TLS. */
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),

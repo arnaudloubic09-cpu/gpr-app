@@ -13,9 +13,8 @@ type VipStatus =
       active: boolean;
       until: string | null;
       sources: string[];
-      freeLevel: { label: string; minGpr: number };
-      priceCents: number;
-      purchaseEnabled: boolean;
+      games: number;
+      gamesRequired: number;
     };
 type Partner = {
   id: string;
@@ -74,15 +73,6 @@ export default function VipScreen() {
     }
   };
 
-  const buy = async () => {
-    setError(null);
-    try {
-      await api('/me/vip/purchase', { method: 'POST' });
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Une erreur est survenue.');
-    }
-  };
-
   const now = Date.now();
   return (
     <Screen>
@@ -103,7 +93,9 @@ export default function VipScreen() {
               Membre VIP
             </Text>
             <Text style={{ color: '#d1d5db', marginTop: space(1) }}>
-              Valable jusqu’au {s.until ? formatDate(s.until) : '—'}
+              {s.sources.includes('GAMES')
+                ? `${s.games} parties sur les 12 derniers mois. Carte valable au moins jusqu’au ${s.until ? formatDate(s.until) : '—'}, et prolongée à chaque partie.`
+                : `Valable jusqu’au ${s.until ? formatDate(s.until) : '—'}`}
             </Text>
           </>
         ) : (
@@ -112,20 +104,34 @@ export default function VipScreen() {
               Profitez des offres de nos partenaires
             </Text>
             <Text style={{ color: '#d1d5db', marginTop: space(2) }}>
-              Gratuite pendant 1 an dès que vous atteignez le niveau {s.freeLevel.label}, ou{' '}
-              {(s.priceCents / 100).toLocaleString('fr-FR')} € pour 1 an.
+              Gratuite dès {s.gamesRequired} parties jouées dans les clubs du GPR sur les 12
+              derniers mois.
+            </Text>
+            <View
+              style={{
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: '#4a4c51',
+                marginTop: space(4),
+                overflow: 'hidden',
+              }}
+            >
+              <View
+                style={{
+                  width: `${Math.min(100, (s.games / s.gamesRequired) * 100)}%`,
+                  height: 8,
+                  backgroundColor: colors.accent,
+                }}
+              />
+            </View>
+            <Text style={{ color: '#fff', fontWeight: '700', marginTop: space(2) }}>
+              {s.games} / {s.gamesRequired} parties · encore{' '}
+              {Math.max(0, s.gamesRequired - s.games)}
             </Text>
           </>
         )}
       </View>
 
-      {!isVip ? (
-        <Button
-          label={`Obtenir la carte VIP · ${(s.priceCents / 100).toLocaleString('fr-FR')} €/an`}
-          icon="diamond-outline"
-          onPress={buy}
-        />
-      ) : null}
       {info ? (
         <Text style={{ color: colors.success, fontWeight: '600', marginTop: space(2) }}>
           {info}

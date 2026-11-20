@@ -4,7 +4,8 @@ import { Club, PrismaClient, Role, User } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { TokenService } from '../src/auth/token.service';
-import { createClub, createTestApp, createUser } from './helpers';
+import { PartnerPortalService } from '../src/club-content/partner-portal.service';
+import { CapturingMailService, createClub, createTestApp, createUser } from './helpers';
 
 // PNG 1×1 valide
 const PNG =
@@ -14,6 +15,7 @@ describe('Info du moment et partenaires locaux (intégration)', () => {
   const prisma = new PrismaClient();
   let app: INestApplication;
   let moduleRef: TestingModule;
+  let mail: CapturingMailService;
   const http = () => request(app.getHttpServer());
   const as = async (u: User) => ({
     Authorization: `Bearer ${(await moduleRef.get(TokenService).issue(u)).accessToken}`,
@@ -21,7 +23,7 @@ describe('Info du moment et partenaires locaux (intégration)', () => {
   const hours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
 
   beforeAll(async () => {
-    ({ app, moduleRef } = await createTestApp());
+    ({ app, moduleRef, mail } = await createTestApp());
   });
   afterAll(async () => {
     await app.close();
@@ -251,6 +253,154 @@ describe('Info du moment et partenaires locaux (intégration)', () => {
         .expect(400);
       await http().put(`/clubs/${club.id}/logo`).set(h).send({ logo: null }).expect(200);
       await http().get(`/clubs/${club.id}/logo`).expect(404);
+    });
+  });
+
+  describe('suivi des avantages chez les partenaires locaux', () => {
+    const playIn = async (u: User, clubId: string) => {
+      const t = new Date(Date.now() - 86_400_000);
+      await prisma.ledgerEntry.create({
+        data: {
+          userId: u.id,
+          type: 'EARN',
+          amount: 30,
+          sourceType: 'BOOKING',
+          sourceId: randomUUID(),
+          clubId,
+          idempotencyKey: `t:${randomUUID()}`,
+          earnedAt: t,
+          availableAt: t,
+        },
+      });
+    };
+    async function setup() {
+      const h = await as(admin);
+      const created = await http()
+        .post(`/clubs/${club.id}/admin/local-partners`)
+        .set(h)
+        .send({
+          name: 'Le Bistrot',
+          offer: '-10 % sur l’addition',
+          address: '1 place du Capitole, Toulouse',
+          email: 'bistrot@t.example',
+        })
+        .expect(201);
+      const [row] = (await http().get(`/clubs/${club.id}/admin/local-partners`).set(h).expect(200))
+        .body;
+      const portal = { 'x-partner-token': row.portalUrl.split('/partenaire/acces/')[1] as string };
+      const zoe = await prisma.user.create({
+        data: { email: `${randomUUID()}@t.example`, firstName: 'Zoé', lastName: 'martin' },
+      });
+      return { partnerId: created.body.id as string, row, portal, zoe };
+    }
+
+    it('QR code réservé aux joueurs actifs dans le club ; le partenaire le scanne et valide une seule fois', async () => {
+      const { partnerId, row, portal, zoe } = await setup();
+      expect(row).toMatchObject({ email: 'bistrot@t.example', stats: { thisMonth: 0, total: 0 } });
+      const hz = await as(zoe);
+      await http().post(`/me/local-partners/${partnerId}/use`).set(hz).expect(403);
+
+      await playIn(zoe, club.id);
+      const use = (await http().post(`/me/local-partners/${partnerId}/use`).set(hz).expect(201))
+        .body;
+      expect(use.url).toMatch(/\/partenaire\/valider\?t=/);
+      expect(
+        (await http().get(`/me/local-partner-uses/${use.token}`).set(hz).expect(200)).body.status,
+      ).toBe('PENDING');
+
+      // Sans lien partenaire : refusé
+      await http().get(`/partner-portal/uses/${use.token}`).expect(401);
+      const preview = await http().get(`/partner-portal/uses/${use.token}`).set(portal).expect(200);
+      expect(preview.body).toMatchObject({ status: 'VALID', player: 'Zoé M.' });
+
+      // Deux scans simultanés : une seule validation
+      const results = await Promise.all([
+        http().post(`/partner-portal/uses/${use.token}`).set(portal),
+        http().post(`/partner-portal/uses/${use.token}`).set(portal),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([200, 410]);
+      expect(
+        (await http().get(`/me/local-partner-uses/${use.token}`).set(hz).expect(200)).body.status,
+      ).toBe('USED');
+
+      // Suivi : partenaire, club, GPR
+      const me = (await http().get('/partner-portal').set(portal).expect(200)).body;
+      expect(me.stats).toEqual({ thisMonth: 1, lastMonth: 0, total: 1 });
+      expect(me.recent[0].player).toBe('Zoé M.');
+      const [after] = (
+        await http()
+          .get(`/clubs/${club.id}/admin/local-partners`)
+          .set(await as(admin))
+          .expect(200)
+      ).body;
+      expect(after.stats.total).toBe(1);
+      const sa = await createUser(prisma, Role.SUPER_ADMIN);
+      const all = (
+        await http()
+          .get('/admin/local-partners')
+          .set(await as(sa))
+          .expect(200)
+      ).body;
+      expect(all.find((p: { id: string }) => p.id === partnerId).stats.thisMonth).toBe(1);
+      await http()
+        .get('/admin/local-partners')
+        .set(await as(admin))
+        .expect(403);
+    });
+
+    it('QR code expiré ou d’un autre partenaire refusé ; nouveau lien : l’ancien ne marche plus', async () => {
+      const { partnerId, portal, zoe } = await setup();
+      await playIn(zoe, club.id);
+      const hz = await as(zoe);
+      const use = (await http().post(`/me/local-partners/${partnerId}/use`).set(hz).expect(201))
+        .body;
+
+      const otherPartner = await prisma.localPartner.create({
+        data: {
+          clubId: club.id,
+          name: 'Kiné',
+          offer: '-5 €',
+          address: 'Toulouse',
+          portalToken: randomUUID(),
+        },
+      });
+      await http()
+        .get(`/partner-portal/uses/${use.token}`)
+        .set({ 'x-partner-token': otherPartner.portalToken })
+        .expect(403);
+
+      await prisma.localPartnerUse.updateMany({
+        where: { partnerId },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      });
+      await http().post(`/partner-portal/uses/${use.token}`).set(portal).expect(410);
+
+      const regen = await http()
+        .post(`/clubs/${club.id}/admin/local-partners/${partnerId}/portal-link`)
+        .set(await as(admin))
+        .expect(201);
+      expect(regen.body.portalUrl).not.toContain(portal['x-partner-token']);
+      await http().get('/partner-portal').set(portal).expect(401);
+    });
+
+    it('récapitulatif mensuel envoyé par email au partenaire', async () => {
+      const { partnerId, portal, zoe } = await setup();
+      await playIn(zoe, club.id);
+      const use = (
+        await http()
+          .post(`/me/local-partners/${partnerId}/use`)
+          .set(await as(zoe))
+          .expect(201)
+      ).body;
+      await http().post(`/partner-portal/uses/${use.token}`).set(portal).expect(200);
+      const nextMonth = new Date();
+      nextMonth.setUTCDate(15);
+      nextMonth.setUTCMonth(nextMonth.getUTCMonth() + 1);
+      mail.alerts.length = 0;
+      await moduleRef.get(PartnerPortalService).monthlyReports(nextMonth);
+      const m = mail.alerts.find((a) => a.to.includes('bistrot@t.example'));
+      expect(m?.subject).toContain('1 utilisation');
+      expect(m?.text).toContain('/partenaire/acces/');
     });
   });
 });

@@ -35,12 +35,17 @@ export const localPartnerInputSchema = z
     address: z.string().trim().min(5).max(200),
     logo: logoDataUrlSchema.nullable().optional(),
     isActive: z.boolean().optional(),
+    /** Email du partenaire (récapitulatif mensuel des utilisations). */
+    email: z.string().trim().toLowerCase().email().max(200).nullable().optional(),
   })
   .strict();
 export type LocalPartnerInput = z.infer<typeof localPartnerInputSchema>;
 
 /** Avantage d'un partenaire local actif si le joueur a joué dans ce club au cours des N derniers jours. */
 export const LOCAL_PARTNER_ACTIVITY_DAYS = 30;
+
+/** Durée de validité du QR code « Utiliser l'avantage » présenté au partenaire. */
+export const LOCAL_PARTNER_USE_TTL_MINUTES = 10;
 
 /** Lien d'itinéraire universel (Google Maps sur Android et le web, propose Plans sur iPhone). */
 export function mapsUrl(address: string): string {

@@ -4,7 +4,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
@@ -13,15 +12,15 @@ import {
   PartnerInput,
   VIP_LOW_STOCK_THRESHOLD,
   VipGrantInput,
+  VIP_WINDOW_DAYS,
   VipSettings,
-  vipSettingsSchema,
+  vipSettingsBase,
 } from '@gpr/core';
 import type { AuthUser } from '../auth/auth.types';
 import { AuditService } from '../common/audit/audit.service';
 import { MailService } from '../common/mail/mail.service';
 import { NotificationsService } from '../gamification/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { RulesService } from '../rules/rules.service';
 
 const SETTINGS_KEY = 'vip';
 const DAY = 86_400_000;
@@ -32,8 +31,9 @@ const addMonthsUTC = (d: Date, m: number) => {
 };
 
 /**
- * Carte VIP : accès gratuit au niveau le plus élevé (Platine), achat simple d'un an
- * (paiement branché à l'activation) ou attribution manuelle par le super admin.
+ * Carte VIP gratuite : le joueur est VIP tant qu'il a joué au moins `gamesRequired` parties
+ * (10 par défaut) dans les clubs du GPR sur les 12 derniers mois (statut glissant).
+ * Le super admin peut aussi attribuer la carte à la main.
  * Avantage : codes promo de partenaires extérieurs, valables une semaine.
  * Tant que la carte est désactivée, rien n'est visible ni attribué côté joueur.
  */
@@ -43,7 +43,6 @@ export class VipService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly rules: RulesService,
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
@@ -52,7 +51,8 @@ export class VipService {
   // ── Réglages ──
   async settings(): Promise<VipSettings> {
     const row = await this.prisma.appSetting.findUnique({ where: { key: SETTINGS_KEY } });
-    const parsed = vipSettingsSchema.safeParse({
+    // Les anciens réglages (prix, paiement) sont ignorés.
+    const parsed = vipSettingsBase.safeParse({
       ...DEFAULT_VIP_SETTINGS,
       ...((row?.value as object) ?? {}),
     });
@@ -74,8 +74,8 @@ export class VipService {
       before,
       after: input,
     });
-    // À l'activation : les joueurs déjà Platine reçoivent leur carte tout de suite.
-    if (input.enabled && !before.enabled) await this.grantPlatinum();
+    // À l'activation : les joueurs qui remplissent déjà la condition sont prévenus tout de suite.
+    if (input.enabled && !before.enabled) await this.refreshGamesMemberships();
     return this.settings();
   }
 
@@ -90,75 +90,120 @@ export class VipService {
     return { userId, startsAt: { lte: now }, endsAt: { gt: now } };
   }
 
+  /**
+   * Parties validées du joueur sur les 12 derniers mois (une réservation = une partie, même si
+   * ses points ont été recalculés ; les parties annulées ne comptent pas), de la plus récente à la plus ancienne.
+   */
+  private async recentGames(userId: string, now: Date): Promise<Date[]> {
+    const since = new Date(now.getTime() - VIP_WINDOW_DAYS * DAY);
+    const rows = await this.prisma.$queryRaw<{ playedAt: Date }[]>`
+      SELECT MIN(l."earnedAt") AS "playedAt" FROM "LedgerEntry" l
+      WHERE l."userId" = ${userId}::uuid AND l.type = 'EARN' AND l."sourceType" = 'BOOKING'
+        AND l."earnedAt" > ${since} AND l."earnedAt" <= ${now} AND l."availableAt" <= ${now}
+        AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" r WHERE r."reversesEntryId" = l.id)
+      GROUP BY l."sourceId" ORDER BY "playedAt" DESC`;
+    return rows.map((r) => r.playedAt);
+  }
+
+  /** Statut « parties » : actif si assez de parties ; `until` = date de fin si le joueur ne rejoue plus. */
+  private gamesStatus(games: Date[], required: number) {
+    const active = games.length >= required;
+    return {
+      games: games.length,
+      active,
+      until: active ? new Date(games[required - 1].getTime() + VIP_WINDOW_DAYS * DAY) : null,
+    };
+  }
+
   async status(userId: string, now = new Date()) {
     const s = await this.settings();
     if (!s.enabled) return { enabled: false as const };
-    const memberships = await this.prisma.vipMembership.findMany({
-      where: { userId, endsAt: { gt: now } },
-      orderBy: { endsAt: 'desc' },
-      select: { source: true, startsAt: true, endsAt: true },
-    });
-    const active = memberships.filter((m) => m.startsAt <= now);
-    const { levels } = await this.rules.getActive();
-    const top = [...levels].sort((a, b) => b.minGpr - a.minGpr)[0];
+    const [games, manual] = await Promise.all([
+      this.recentGames(userId, now),
+      this.prisma.vipMembership.findFirst({
+        where: { ...this.activeWhere(userId, now), source: 'MANUAL' },
+        orderBy: { endsAt: 'desc' },
+        select: { endsAt: true },
+      }),
+    ]);
+    const g = this.gamesStatus(games, s.gamesRequired);
+    const sources = [...(g.active ? ['GAMES'] : []), ...(manual ? ['MANUAL'] : [])];
+    const untils = [g.until, manual?.endsAt].filter((d): d is Date => !!d);
     return {
       enabled: true as const,
-      active: active.length > 0,
-      until: memberships[0]?.endsAt ?? null,
-      sources: [...new Set(active.map((m) => m.source))],
-      freeLevel: { code: top.code, label: top.label, minGpr: top.minGpr },
-      priceCents: s.priceCents,
-      purchaseEnabled: s.purchaseEnabled,
+      active: sources.length > 0,
+      sources,
+      /** Date jusqu'à laquelle la carte reste valable même sans nouvelle partie. */
+      until: untils.length ? new Date(Math.max(...untils.map((d) => d.getTime()))) : null,
+      games: g.games,
+      gamesRequired: s.gamesRequired,
     };
   }
 
   private async isVip(userId: string, now = new Date()) {
-    return (await this.prisma.vipMembership.count({ where: this.activeWhere(userId, now) })) > 0;
+    const manual = await this.prisma.vipMembership.count({
+      where: { ...this.activeWhere(userId, now), source: 'MANUAL' },
+    });
+    if (manual > 0) return true;
+    const { gamesRequired } = await this.settings();
+    return (await this.recentGames(userId, now)).length >= gamesRequired;
   }
 
   // ── Attribution ──
-  /** Joueurs au niveau le plus élevé sans carte « Platine » en cours : carte d'un an. Idempotent. */
-  async grantPlatinum(now = new Date()): Promise<number> {
-    if (!(await this.settings()).enabled) return 0;
-    const { levels } = await this.rules.getActive();
-    const top = [...levels].sort((a, b) => b.minGpr - a.minGpr)[0];
-    const since = new Date(now.getTime() - 365 * DAY);
-    // Même calcul que le niveau : points gagnés sur 12 mois glissants, validés.
-    const rows = await this.prisma.$queryRaw<{ userId: string }[]>`
+  /**
+   * Tâche quotidienne : enregistre la période VIP des joueurs qui remplissent la condition de
+   * parties (statistiques du back-office) et prévient ceux qui deviennent VIP. Idempotent.
+   */
+  async refreshGamesMemberships(now = new Date()): Promise<number> {
+    const s = await this.settings();
+    if (!s.enabled) return 0;
+    const since = new Date(now.getTime() - VIP_WINDOW_DAYS * DAY);
+    const candidates = await this.prisma.$queryRaw<{ userId: string }[]>`
       SELECT l."userId" FROM "LedgerEntry" l
       JOIN "User" u ON u.id = l."userId" AND u.role = 'PLAYER' AND u."anonymizedAt" IS NULL
-      WHERE l.type IN ('EARN','BONUS','CHALLENGE','REVERSAL') AND l."earnedAt" > ${since} AND l."earnedAt" <= ${now} AND l."availableAt" <= ${now}
-      GROUP BY l."userId" HAVING SUM(l.amount) >= ${top.minGpr}`;
-    let granted = 0;
-    for (const { userId } of rows) {
+      WHERE l.type = 'EARN' AND l."sourceType" = 'BOOKING'
+        AND l."earnedAt" > ${since} AND l."earnedAt" <= ${now} AND l."availableAt" <= ${now}
+        AND NOT EXISTS (SELECT 1 FROM "LedgerEntry" r WHERE r."reversesEntryId" = l.id)
+      GROUP BY l."userId" HAVING COUNT(DISTINCT l."sourceId") >= ${s.gamesRequired}`;
+    let newcomers = 0;
+    for (const { userId } of candidates) {
+      const g = this.gamesStatus(await this.recentGames(userId, now), s.gamesRequired);
+      if (!g.active || !g.until) continue;
       const current = await this.prisma.vipMembership.findFirst({
-        where: { userId, source: 'PLATINUM', endsAt: { gt: now } },
+        where: { ...this.activeWhere(userId, now), source: 'GAMES' },
       });
-      if (current) continue;
+      if (current) {
+        if (current.endsAt.getTime() !== g.until.getTime())
+          await this.prisma.vipMembership.update({
+            where: { id: current.id },
+            data: { endsAt: g.until },
+          });
+        continue;
+      }
       await this.prisma.vipMembership.create({
         data: {
           userId,
-          source: 'PLATINUM',
+          source: 'GAMES',
           startsAt: now,
-          endsAt: addMonthsUTC(now, 12),
-          reason: `Niveau ${top.label}`,
+          endsAt: g.until,
+          reason: `${s.gamesRequired} parties sur 12 mois`,
         },
       });
-      granted++;
+      newcomers++;
       await this.notifications.notify({
         userId,
         type: 'ACCOUNT',
         title: 'Votre carte VIP est activée',
-        body: `Grâce à votre niveau ${top.label}, profitez pendant 1 an des offres de nos partenaires.`,
+        body: `Bravo pour vos ${s.gamesRequired} parties ! Profitez des offres de nos partenaires tant que vous jouez régulièrement.`,
         data: { screen: 'vip' },
-        dedupeKey: `vip:platinum:${userId}:${now.toISOString().slice(0, 10)}`,
+        dedupeKey: `vip:games:${userId}:${now.toISOString().slice(0, 10)}`,
       });
     }
-    if (granted) this.logger.log(`Carte VIP : ${granted} joueur(s) Platine`);
-    return granted;
+    if (newcomers) this.logger.log(`Carte VIP : ${newcomers} nouveau(x) membre(s)`);
+    return newcomers;
   }
 
-  /** Attribution manuelle (cadeau, vente au comptoir…) : prolonge la carte en cours. */
+  /** Attribution manuelle (geste commercial…) : prolonge la carte manuelle en cours. */
   async grantManual(userId: string, input: VipGrantInput, actor: AuthUser) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, role: 'PLAYER', anonymizedAt: null },
@@ -166,7 +211,7 @@ export class VipService {
     if (!user) throw new NotFoundException('Joueur introuvable');
     const now = new Date();
     const last = await this.prisma.vipMembership.findFirst({
-      where: { userId, endsAt: { gt: now } },
+      where: { userId, source: 'MANUAL', endsAt: { gt: now } },
       orderBy: { endsAt: 'desc' },
     });
     const startsAt = last ? last.endsAt : now;
@@ -198,19 +243,6 @@ export class VipService {
       });
     }
     return m;
-  }
-
-  /** Achat en ligne : branché à l'activation (compte Stripe du GPR, conditions générales de vente). */
-  async purchase(_userId: string) {
-    const s = await this.requireEnabled();
-    if (!s.purchaseEnabled) {
-      throw new ServiceUnavailableException(
-        'Le paiement en ligne sera bientôt disponible. Renseignez-vous à l’accueil de votre club.',
-      );
-    }
-    // TODO(activation VIP) : création d'une session de paiement Stripe (60 €, 1 an) puis, sur
-    // confirmation du paiement (webhook signé), VipMembership { source: PURCHASE, paymentRef }.
-    throw new ServiceUnavailableException('Paiement en ligne non configuré.');
   }
 
   // ── Partenaires et codes (joueur) ──
@@ -328,7 +360,7 @@ export class VipService {
 
   // ── Administration ──
   async adminOverview(now = new Date()) {
-    const [settings, partners, stats, members] = await Promise.all([
+    const [settings, partners, stats, members, distinctMembers] = await Promise.all([
       this.settings(),
       this.prisma.partner.findMany({ orderBy: { name: 'asc' } }),
       this.prisma.partnerCode.groupBy({
@@ -340,10 +372,16 @@ export class VipService {
         where: { startsAt: { lte: now }, endsAt: { gt: now } },
         _count: { userId: true },
       }),
+      this.prisma.vipMembership.findMany({
+        where: { startsAt: { lte: now }, endsAt: { gt: now } },
+        distinct: ['userId'],
+        select: { userId: true },
+      }),
     ]);
     return {
       settings,
       activeMembers: Object.fromEntries(members.map((m) => [m.source, m._count.userId])),
+      activeTotal: distinctMembers.length,
       partners: partners.map((p) => {
         const s = stats.find((x) => x.partnerId === p.id);
         const total = s?._count._all ?? 0;

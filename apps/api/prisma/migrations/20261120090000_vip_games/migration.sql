@@ -1,0 +1,1 @@
+ALTER TYPE "VipSource" ADD VALUE 'GAMES';
